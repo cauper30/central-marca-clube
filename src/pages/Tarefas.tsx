@@ -55,6 +55,10 @@ export default function Tarefas() {
     };
   });
 
+  useEffect(() => {
+    if (searchParams.get("status") || searchParams.get("assignee")) setShowFilters(true);
+  }, [searchParams]);
+
   const { data: tasks = [], isLoading } = useTasks(showArchived);
   const { data: statuses = [] } = useTaskStatuses();
 
