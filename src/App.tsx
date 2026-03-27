@@ -10,6 +10,7 @@ import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import PublicLinks from "@/pages/PublicLinks";
 import PlaceholderPage from "@/pages/PlaceholderPage";
+import Tarefas from "@/pages/Tarefas";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,7 +33,7 @@ const App = () => (
               }
             >
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/tarefas" element={<PlaceholderPage title="Tarefas" phase="Em construção — Fase 2" />} />
+              <Route path="/tarefas" element={<Tarefas />} />
               <Route path="/eventos" element={<PlaceholderPage title="Eventos & Campanhas" phase="Em construção — Fase 3" />} />
               <Route path="/linktree" element={<PlaceholderPage title="Gerenciar Linktree" phase="Em construção" />} />
               <Route path="/reclamacoes" element={<PlaceholderPage title="Reclamações" phase="Em construção" />} />
