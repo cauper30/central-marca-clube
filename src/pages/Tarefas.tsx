@@ -35,6 +35,7 @@ const emptyFilter: TaskFilter = {
 
 export default function Tarefas() {
   const { profile, user } = useAuth();
+  const [searchParams] = useSearchParams();
   const isGestor = profile?.role === "gestor";
   const defaultView: ViewMode = isGestor ? "lista" : "kanban";
 
@@ -44,7 +45,15 @@ export default function Tarefas() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState<TaskFilter>(emptyFilter);
+  const [filters, setFilters] = useState<TaskFilter>(() => {
+    const statusParam = searchParams.get("status");
+    const assigneeParam = searchParams.get("assignee");
+    return {
+      ...emptyFilter,
+      statusIds: statusParam ? [statusParam] : [],
+      assigneeIds: assigneeParam ? [assigneeParam] : [],
+    };
+  });
 
   const { data: tasks = [], isLoading } = useTasks(showArchived);
   const { data: statuses = [] } = useTaskStatuses();
