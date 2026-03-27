@@ -17,16 +17,16 @@ export function useTasks(showArchived = false) {
         .from("tasks")
         .select(`
           *,
-          profiles:assigned_to(id, full_name, avatar_url),
-          task_statuses:status_id(id, name, color),
-          task_types:type_id(id, name, color, icon),
-          task_tags(tag_id, tags:tag_id(id, name, color))
+          profiles:profiles!tasks_assigned_to_fkey(id, full_name, avatar_url),
+          task_statuses:task_statuses!tasks_status_id_fkey(id, name, color),
+          task_types:task_types!tasks_type_id_fkey(id, name, color, icon),
+          task_tags(tag_id, tags:tags!task_tags_tag_id_fkey(id, name, color))
         `)
         .eq("is_archived", showArchived)
         .order("sort_order");
       const { data, error } = await query;
       if (error) throw error;
-      return data as Task[];
+      return (data as unknown) as Task[];
     },
   });
 }
