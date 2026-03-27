@@ -146,7 +146,7 @@ export function useCreateTask() {
       tag_ids?: string[];
     }) => {
       const { tag_ids, ...taskData } = task;
-      const { data, error } = await supabase.from("tasks").insert(taskData).select("id").single();
+      const { data, error } = await supabase.from("tasks").insert([taskData]).select("id").single();
       if (error) throw error;
 
       if (tag_ids?.length) {
