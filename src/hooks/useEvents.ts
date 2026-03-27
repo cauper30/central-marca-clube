@@ -1,0 +1,146 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type EventRow = Database["public"]["Tables"]["events"]["Row"];
+type CampaignRow = Database["public"]["Tables"]["campaigns"]["Row"];
+
+export type EventWithDetails = EventRow & {
+  profiles?: { id: string; full_name: string } | null;
+  taskCount?: number;
+};
+
+export type CampaignWithEvent = CampaignRow & {
+  events?: { id: string; name: string } | null;
+};
+
+export function useEventsWithDetails() {
+  return useQuery({
+    queryKey: ["events_detailed"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("events")
+        .select("*, profiles:responsible_id(id, full_name)")
+        .eq("is_archived", false)
+        .order("event_date", { ascending: true });
+      if (error) throw error;
+
+      // Get task counts per event
+      const { data: tasks } = await supabase
+        .from("tasks")
+        .select("id, event_id")
+        .eq("is_archived", false)
+        .not("event_id", "is", null);
+
+      const taskCounts: Record<string, number> = {};
+      tasks?.forEach((t) => {
+        if (t.event_id) taskCounts[t.event_id] = (taskCounts[t.event_id] || 0) + 1;
+      });
+
+      return (data as unknown as EventWithDetails[]).map((e) => ({
+        ...e,
+        taskCount: taskCounts[e.id] || 0,
+      }));
+    },
+  });
+}
+
+export function useEventTasks(eventId: string | null) {
+  return useQuery({
+    queryKey: ["event_tasks", eventId],
+    enabled: !!eventId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("id, title, priority, status_id, task_statuses:task_statuses!tasks_status_id_fkey(name, color)")
+        .eq("event_id", eventId!)
+        .eq("is_archived", false)
+        .order("sort_order");
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useCampaignsForEvent(eventId: string | null) {
+  return useQuery({
+    queryKey: ["campaigns_for_event", eventId],
+    enabled: !!eventId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("campaigns")
+        .select("*")
+        .eq("event_id", eventId!)
+        .eq("is_archived", false)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useCampaigns() {
+  return useQuery({
+    queryKey: ["campaigns_all"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("campaigns")
+        .select("*, events:event_id(id, name)")
+        .eq("is_archived", false)
+        .order("name");
+      if (error) throw error;
+      return data as unknown as CampaignWithEvent[];
+    },
+  });
+}
+
+export function useCreateEvent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (event: {
+      name: string;
+      description?: string;
+      event_date?: string | null;
+      event_end_date?: string | null;
+      location?: string;
+      responsible_id?: string | null;
+      status?: string;
+      created_by: string;
+    }) => {
+      const { data, error } = await supabase.from("events").insert([event]).select("id").single();
+      if (error) throw error;
+      await supabase.from("activity_log").insert({
+        user_id: event.created_by,
+        action: "Evento criado",
+        entity_type: "event",
+        entity_id: data.id,
+        details: { name: event.name },
+      });
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["events_detailed"] }),
+  });
+}
+
+export function useCreateCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (campaign: {
+      name: string;
+      description?: string;
+      start_date?: string | null;
+      end_date?: string | null;
+      event_id?: string | null;
+      status?: string;
+      created_by: string;
+    }) => {
+      const { data, error } = await supabase.from("campaigns").insert([campaign]).select("id").single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["campaigns_all"] });
+      qc.invalidateQueries({ queryKey: ["campaigns_for_event"] });
+    },
+  });
+}
