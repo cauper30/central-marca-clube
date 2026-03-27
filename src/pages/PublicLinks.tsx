@@ -28,10 +28,12 @@ export default function PublicLinks() {
   }, []);
 
   const handleLinkClick = async (link: any) => {
-    // Fire and forget click count increment
-    supabase.rpc("increment_click_count" as any, { link_id: link.id } as any).catch(() => {
-      // fallback: we can't increment without a function, just open the link
-    });
+    // Increment click count (best effort)
+    supabase
+      .from("links")
+      .update({ click_count: (link.click_count || 0) + 1 })
+      .eq("id", link.id)
+      .then(() => {});
     window.open(link.url, "_blank");
   };
 
