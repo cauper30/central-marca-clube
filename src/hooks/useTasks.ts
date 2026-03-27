@@ -1,5 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables, Database } from "@/integrations/supabase/types";
+
+type TaskPriority = Database["public"]["Enums"]["task_priority"];
 import type { Tables } from "@/integrations/supabase/types";
 
 export type Task = Tables<"tasks"> & {
