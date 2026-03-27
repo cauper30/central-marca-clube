@@ -9,9 +9,16 @@ import AppLayout from "@/components/AppLayout";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import PublicLinks from "@/pages/PublicLinks";
-import PlaceholderPage from "@/pages/PlaceholderPage";
 import Tarefas from "@/pages/Tarefas";
 import Eventos from "@/pages/Eventos";
+import Reclamacoes from "@/pages/Reclamacoes";
+import Config from "@/pages/Config";
+import ConfigUsuarios from "@/pages/config/ConfigUsuarios";
+import ConfigTipos from "@/pages/config/ConfigTipos";
+import ConfigStatus from "@/pages/config/ConfigStatus";
+import ConfigCampos from "@/pages/config/ConfigCampos";
+import ConfigLinktree from "@/pages/config/ConfigLinktree";
+import ConfigGeral from "@/pages/config/ConfigGeral";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,9 +43,16 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/tarefas" element={<Tarefas />} />
               <Route path="/eventos" element={<Eventos />} />
-              <Route path="/linktree" element={<PlaceholderPage title="Gerenciar Linktree" phase="Em construção" />} />
-              <Route path="/reclamacoes" element={<PlaceholderPage title="Reclamações" phase="Em construção" />} />
-              <Route path="/config" element={<PlaceholderPage title="Configurações" phase="Em construção" />} />
+              <Route path="/linktree" element={<Navigate to="/config/linktree" replace />} />
+              <Route path="/reclamacoes" element={<Reclamacoes />} />
+              <Route path="/config" element={<Config />}>
+                <Route path="usuarios" element={<ConfigUsuarios />} />
+                <Route path="tipos" element={<ConfigTipos />} />
+                <Route path="status" element={<ConfigStatus />} />
+                <Route path="campos" element={<ConfigCampos />} />
+                <Route path="linktree" element={<ConfigLinktree />} />
+                <Route path="geral" element={<ConfigGeral />} />
+              </Route>
             </Route>
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="*" element={<NotFound />} />

@@ -35,8 +35,14 @@ const pageTitles: Record<string, string> = {
   "/tarefas": "Tarefas",
   "/eventos": "Eventos & Campanhas",
   "/linktree": "Linktree",
-  "/reclamacoes": "Reclamações",
+  "/reclamacoes": "Reclamações & Sugestões",
   "/config": "Configurações",
+  "/config/usuarios": "Usuários",
+  "/config/tipos": "Tipos de Tarefa",
+  "/config/status": "Status de Tarefas",
+  "/config/campos": "Campos Personalizados",
+  "/config/linktree": "Linktree",
+  "/config/geral": "Configurações Gerais",
 };
 
 export default function AppLayout() {
