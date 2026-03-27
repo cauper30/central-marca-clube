@@ -53,7 +53,7 @@ export default function CreateTaskModal({ open, onClose, isGestor, userId, userA
         title: title.trim(),
         description: description.trim() || undefined,
         type_id: typeId || null,
-        priority,
+        priority: priority as "urgente" | "alta" | "media" | "baixa",
         assigned_to: assignee || null,
         due_date: dueDate || null,
         event_id: eventId || null,
