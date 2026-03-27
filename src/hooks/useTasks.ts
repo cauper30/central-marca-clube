@@ -4,7 +4,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 type Tables<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Row"];
 type TaskPriority = Database["public"]["Enums"]["task_priority"];
-import type { Tables } from "@/integrations/supabase/types";
+
 
 export type Task = Tables<"tasks"> & {
   profiles?: { id: string; full_name: string; avatar_url: string | null } | null;
