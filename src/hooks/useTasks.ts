@@ -137,7 +137,7 @@ export function useCreateTask() {
       title: string;
       description?: string;
       type_id?: string | null;
-      priority?: string;
+      priority?: TaskPriority;
       assigned_to?: string | null;
       due_date?: string | null;
       event_id?: string | null;
