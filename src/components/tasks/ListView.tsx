@@ -9,10 +9,10 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const priorityColors: Record<string, string> = {
-  urgente: "bg-red-100 text-red-800",
-  alta: "bg-orange-100 text-orange-800",
-  media: "bg-blue-100 text-blue-800",
-  baixa: "bg-gray-100 text-gray-600",
+  urgente: "bg-red-50 text-red-600 border-red-200",
+  alta: "bg-orange-50 text-orange-600 border-orange-200",
+  media: "bg-amber-50 text-amber-600 border-amber-200",
+  baixa: "bg-slate-50 text-slate-500 border-slate-200",
 };
 
 type SortKey = "title" | "priority" | "due_date" | "status" | "assignee" | "type";
@@ -48,20 +48,20 @@ export default function ListView({ tasks, loading, onTaskClick }: Props) {
   });
 
   const SortHeader = ({ label, field }: { label: string; field: SortKey }) => (
-    <TableHead className="cursor-pointer select-none" onClick={() => toggleSort(field)}>
+    <TableHead className="cursor-pointer select-none text-[12px] font-semibold uppercase tracking-wider" style={{ color: '#94A3B8', letterSpacing: '0.3px' }} onClick={() => toggleSort(field)}>
       <div className="flex items-center gap-1">
         {label}
-        <ArrowUpDown className="h-3 w-3 text-muted-foreground" />
+        <ArrowUpDown className="h-3 w-3" />
       </div>
     </TableHead>
   );
 
   if (loading) {
-    return <div className="space-y-2">{[1,2,3,4,5].map(i => <Skeleton key={i} className="h-12 rounded-lg" />)}</div>;
+    return <div className="space-y-2">{[1,2,3,4,5].map(i => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>;
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card overflow-auto">
+    <div className="rounded-2xl border bg-card overflow-auto" style={{ borderColor: 'rgba(226, 232, 240, 0.6)', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)' }}>
       <Table>
         <TableHeader>
           <TableRow>
@@ -84,13 +84,13 @@ export default function ListView({ tasks, loading, onTaskClick }: Props) {
             sorted.map((task) => (
               <TableRow
                 key={task.id}
-                className="cursor-pointer hover:bg-muted/50"
+                className="cursor-pointer row-hover"
                 onClick={() => onTaskClick(task)}
               >
-                <TableCell className="font-medium max-w-[300px] truncate">{task.title}</TableCell>
+                <TableCell className="font-medium max-w-[300px] truncate text-[13px]" style={{ color: '#1A1A2E' }}>{task.title}</TableCell>
                 <TableCell>
                   {task.task_types && (
-                    <Badge variant="outline" className="text-[11px]" style={{ borderColor: task.task_types.color, color: task.task_types.color }}>
+                    <Badge variant="outline" className="text-[11px] rounded-md" style={{ borderColor: task.task_types.color, color: task.task_types.color }}>
                       {task.task_types.name}
                     </Badge>
                   )}
@@ -99,12 +99,12 @@ export default function ListView({ tasks, loading, onTaskClick }: Props) {
                   {task.task_statuses && (
                     <div className="flex items-center gap-1.5">
                       <div className="h-2 w-2 rounded-full" style={{ backgroundColor: task.task_statuses.color }} />
-                      <span className="text-sm">{task.task_statuses.name}</span>
+                      <span className="text-[13px]" style={{ color: '#334155' }}>{task.task_statuses.name}</span>
                     </div>
                   )}
                 </TableCell>
                 <TableCell>
-                  <Badge className={`text-[11px] ${priorityColors[task.priority]}`} variant="secondary">
+                  <Badge className={`text-[11px] rounded-md border ${priorityColors[task.priority]}`} variant="secondary">
                     {task.priority}
                   </Badge>
                 </TableCell>
@@ -112,17 +112,17 @@ export default function ListView({ tasks, loading, onTaskClick }: Props) {
                   {task.profiles ? (
                     <div className="flex items-center gap-1.5">
                       <Avatar className="h-5 w-5">
-                        <AvatarFallback className="text-[10px] bg-muted">
+                        <AvatarFallback className="text-[9px] bg-secondary font-medium">
                           {task.profiles.full_name.split(" ").map(n => n[0]).join("").slice(0, 2)}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="text-sm">{task.profiles.full_name}</span>
+                      <span className="text-[13px]" style={{ color: '#334155' }}>{task.profiles.full_name}</span>
                     </div>
                   ) : (
-                    <span className="text-sm text-muted-foreground">—</span>
+                    <span className="text-[13px] text-muted-foreground">—</span>
                   )}
                 </TableCell>
-                <TableCell>
+                <TableCell className="text-[13px]" style={{ color: '#334155' }}>
                   {task.due_date
                     ? format(new Date(task.due_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })
                     : <span className="text-muted-foreground">—</span>

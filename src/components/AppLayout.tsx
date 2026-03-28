@@ -116,13 +116,13 @@ export default function AppLayout() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-60 flex-col border-r border-sidebar-border bg-sidebar transition-transform md:relative md:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex w-[250px] flex-col border-r border-sidebar-border sidebar-gradient transition-transform md:relative md:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Logo */}
-        <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
+        <div className="flex items-center gap-3 border-b border-sidebar-border px-6 py-6">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-sm">
             CM
           </div>
           <div>
@@ -135,22 +135,35 @@ export default function AppLayout() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 space-y-1 px-3 py-4">
+        <nav className="flex-1 space-y-1 px-3 py-5">
           {visibleItems.map((item) => {
-            const active = location.pathname === item.path;
+            const active = location.pathname === item.path || location.pathname.startsWith(item.path + "/");
             return (
               <button
                 key={item.path}
                 onClick={() => { navigate(item.path); setMobileOpen(false); }}
                 className={cn(
-                  "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+                  "relative flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm sidebar-item",
                   active
-                    ? "bg-accent text-accent-foreground font-semibold"
-                    : "text-foreground hover:bg-muted"
+                    ? "font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
+                style={active ? {
+                  background: 'rgba(198, 40, 40, 0.08)',
+                  color: '#C62828',
+                } : undefined}
+                onMouseEnter={(e) => {
+                  if (!active) e.currentTarget.style.background = 'rgba(100, 116, 139, 0.06)';
+                }}
+                onMouseLeave={(e) => {
+                  if (!active) e.currentTarget.style.background = 'transparent';
+                }}
               >
-                <item.icon className={cn("h-5 w-5", active ? "text-accent-foreground" : "text-muted-foreground")} />
-                {item.label}
+                {active && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-sm bg-primary" />
+                )}
+                <item.icon className="h-5 w-5" style={{ strokeWidth: 1.8 }} />
+                <span className="font-medium">{item.label}</span>
               </button>
             );
           })}
@@ -159,13 +172,13 @@ export default function AppLayout() {
         {/* User */}
         <div className="border-t border-sidebar-border px-4 py-4">
           <div className="flex items-center gap-3">
-            <Avatar className="h-9 w-9">
+            <Avatar className="h-[38px] w-[38px] ring-2 ring-border">
               <AvatarFallback className="bg-primary-light text-primary text-xs font-medium">
                 {initials}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-foreground">{profile?.full_name}</p>
+              <p className="truncate text-sm font-semibold text-foreground">{profile?.full_name}</p>
               <p className="truncate text-xs text-muted-foreground">{profile ? roleLabels[profile.role] : ""}</p>
             </div>
           </div>
@@ -175,28 +188,26 @@ export default function AppLayout() {
       {/* Main area */}
       <div className="flex flex-1 flex-col min-w-0">
         {/* Header */}
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-card px-4 md:px-7">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b px-4 md:px-7 glass-header" style={{ borderColor: 'rgba(226, 232, 240, 0.5)' }}>
           <div className="flex items-center gap-3">
             <button className="md:hidden" onClick={() => setMobileOpen(true)}>
               <Menu className="h-5 w-5 text-muted-foreground" />
             </button>
-            <h1 className="text-lg font-bold text-foreground">{pageTitle}</h1>
+            <h1 className="text-[22px] font-bold" style={{ color: '#1A1A2E' }}>{pageTitle}</h1>
           </div>
 
           <div className="flex items-center gap-2">
             {/* Notifications */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-5 w-5 text-muted-foreground" />
+                <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full hover:bg-secondary">
+                  <Bell className="h-5 w-5 text-muted-foreground" style={{ strokeWidth: 1.8 }} />
                   {unreadCount > 0 && (
-                    <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                      {unreadCount > 9 ? "9+" : unreadCount}
-                    </span>
+                    <span className="absolute right-1.5 top-1.5 flex h-2 w-2 rounded-full bg-primary" />
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80">
+              <DropdownMenuContent align="end" className="w-80 rounded-2xl" style={{ boxShadow: '0 8px 30px rgba(0,0,0,0.12)', maxHeight: '400px', overflowY: 'auto' }}>
                 {notifications.length === 0 ? (
                   <div className="px-4 py-6 text-center text-sm text-muted-foreground">
                     Nenhuma notificação
@@ -205,7 +216,7 @@ export default function AppLayout() {
                   notifications.map((n) => (
                     <DropdownMenuItem
                       key={n.id}
-                      className={cn("flex flex-col items-start gap-0.5 cursor-pointer", !n.is_read && "bg-primary-light")}
+                      className={cn("flex flex-col items-start gap-0.5 cursor-pointer rounded-lg", !n.is_read && "bg-primary-light")}
                       onClick={() => markAsRead(n.id)}
                     >
                       <span className="text-sm font-medium">{n.title}</span>
@@ -219,15 +230,15 @@ export default function AppLayout() {
             {/* User menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Avatar className="h-8 w-8">
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <Avatar className="h-[34px] w-[34px] transition-all hover:ring-2 hover:ring-border">
                     <AvatarFallback className="bg-primary-light text-primary text-xs font-medium">
                       {initials}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="rounded-xl">
                 <DropdownMenuItem className="gap-2">
                   <User className="h-4 w-4" /> Meu Perfil
                 </DropdownMenuItem>
@@ -240,7 +251,7 @@ export default function AppLayout() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 p-5 md:p-7">
+        <main className="flex-1 p-5 md:p-7 animate-page-enter">
           <Outlet />
         </main>
       </div>
