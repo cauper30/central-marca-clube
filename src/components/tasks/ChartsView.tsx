@@ -24,7 +24,7 @@ export default function ChartsView({ tasks, statuses }: Props) {
 
   const byPriority = useMemo(() => {
     const ps = ["urgente", "alta", "media", "baixa"];
-    const colors = ["#B71C1C", "#F57F17", "#1565C0", "#9E9E9E"];
+    const colors = ["#EF4444", "#F97316", "#F59E0B", "#94A3B8"];
     return ps.map((p, i) => ({
       name: p,
       value: tasks.filter((t) => t.priority === p).length,
@@ -61,10 +61,9 @@ export default function ChartsView({ tasks, statuses }: Props) {
   }, [tasks, statuses]);
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      {/* Donut - by status */}
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Tarefas por Status</CardTitle></CardHeader>
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <Card className="animate-fade-in-up stagger-1">
+        <CardHeader className="pb-2"><CardTitle>Tarefas por Status</CardTitle></CardHeader>
         <CardContent className="flex items-center justify-center">
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
@@ -78,16 +77,15 @@ export default function ChartsView({ tasks, statuses }: Props) {
         </CardContent>
       </Card>
 
-      {/* Bar - by priority */}
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Tarefas por Prioridade</CardTitle></CardHeader>
+      <Card className="animate-fade-in-up stagger-2">
+        <CardHeader className="pb-2"><CardTitle>Tarefas por Prioridade</CardTitle></CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={byPriority}>
-              <XAxis dataKey="name" />
-              <YAxis allowDecimals={false} />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
               <Tooltip />
-              <Bar dataKey="value" name="Tarefas" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="value" name="Tarefas" radius={[6, 6, 0, 0]} animationDuration={500}>
                 {byPriority.map((entry, i) => <Cell key={i} fill={entry.color} />)}
               </Bar>
             </BarChart>
@@ -95,32 +93,30 @@ export default function ChartsView({ tasks, statuses }: Props) {
         </CardContent>
       </Card>
 
-      {/* Bar - by assignee */}
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Tarefas por Responsável</CardTitle></CardHeader>
+      <Card className="animate-fade-in-up stagger-3">
+        <CardHeader className="pb-2"><CardTitle>Tarefas por Responsável</CardTitle></CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={byAssignee} layout="vertical">
-              <XAxis type="number" allowDecimals={false} />
+              <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
               <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} />
               <Tooltip />
-              <Bar dataKey="count" name="Tarefas" fill="hsl(0 67% 47%)" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="count" name="Tarefas" fill="#3B82F6" radius={[0, 6, 6, 0]} animationDuration={500} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
 
-      {/* Line - weekly completed */}
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Concluídas por Semana</CardTitle></CardHeader>
+      <Card className="animate-fade-in-up stagger-4">
+        <CardHeader className="pb-2"><CardTitle>Concluídas por Semana</CardTitle></CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={weeklyCompleted}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="label" />
-              <YAxis allowDecimals={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+              <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
               <Tooltip />
-              <Line type="monotone" dataKey="count" name="Concluídas" stroke="hsl(125 52% 33%)" strokeWidth={2} dot={{ r: 4 }} />
+              <Line type="monotone" dataKey="count" name="Concluídas" stroke="#10B981" strokeWidth={2} dot={{ r: 4, fill: '#10B981' }} animationDuration={800} />
             </LineChart>
           </ResponsiveContainer>
         </CardContent>
