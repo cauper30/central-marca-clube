@@ -12,6 +12,7 @@ import PublicLinks from "@/pages/PublicLinks";
 import Tarefas from "@/pages/Tarefas";
 import Eventos from "@/pages/Eventos";
 import Reclamacoes from "@/pages/Reclamacoes";
+import LinktreePage from "@/pages/LinktreePage";
 import Config from "@/pages/Config";
 import ConfigUsuarios from "@/pages/config/ConfigUsuarios";
 import ConfigTipos from "@/pages/config/ConfigTipos";
@@ -43,7 +44,7 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/tarefas" element={<Tarefas />} />
               <Route path="/eventos" element={<Eventos />} />
-              <Route path="/linktree" element={<Navigate to="/config/linktree" replace />} />
+              <Route path="/linktree" element={<LinktreePage />} />
               <Route path="/reclamacoes" element={<Reclamacoes />} />
               <Route path="/config" element={<Config />}>
                 <Route path="usuarios" element={<ConfigUsuarios />} />
