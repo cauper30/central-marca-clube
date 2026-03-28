@@ -1,11 +1,11 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckSquare, Clock, ThumbsUp, Target, CalendarDays } from "lucide-react";
+import { CheckSquare, Clock, ThumbsUp, Target, CalendarDays, AlertTriangle, CheckCircle2, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { format } from "date-fns";
+import { format, isAfter, subHours, addDays, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface KPI {
@@ -13,6 +13,13 @@ interface KPI {
   completedThisMonth: number;
   pendingApprovals: number;
   onTimePercent: number;
+}
+
+interface AttentionItem {
+  icon: React.ReactNode;
+  text: string;
+  link: string;
+  type: 'overdue' | 'approval' | 'event';
 }
 
 /* Animated counter hook */
@@ -26,7 +33,7 @@ function useCountUp(target: number, duration = 600) {
     const animate = (now: number) => {
       const elapsed = now - start;
       const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
       setValue(Math.round(eased * target));
       if (progress < 1) ref.current = requestAnimationFrame(animate);
     };
@@ -49,6 +56,23 @@ const kpiIconConfigs = [
   { icon: Clock, bg: '#FEF2F2', color: '#EF4444' },
 ];
 
+const actionTranslations: Record<string, string> = {
+  "Tarefa criada": "criou uma tarefa",
+  "Solicitação criada": "criou uma solicitação",
+  "Evento criado": "criou um evento",
+  "Status alterado": "alterou o status",
+  "Comentário adicionado": "comentou",
+  "created": "criou",
+  "moved": "moveu",
+  "approved": "aprovou",
+  "commented": "comentou",
+  "updated": "atualizou",
+  "deleted": "removeu",
+  "archived": "arquivou",
+  "rejected": "reprovou",
+  "assigned": "atribuiu",
+};
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [kpi, setKpi] = useState<KPI | null>(null);
@@ -56,7 +80,10 @@ export default function Dashboard() {
   const [events, setEvents] = useState<any[]>([]);
   const [assigneeData, setAssigneeData] = useState<{ id: string; name: string; count: number }[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
+  const [attentionItems, setAttentionItems] = useState<AttentionItem[]>([]);
+  const [totalAttention, setTotalAttention] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [completedStatusId, setCompletedStatusId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -69,16 +96,18 @@ export default function Dashboard() {
         { data: activityData },
       ] = await Promise.all([
         supabase.from("task_statuses").select("*").eq("is_active", true).order("sort_order"),
-        supabase.from("tasks").select("id, status_id, assigned_to, due_date, is_archived, created_at, updated_at").eq("is_archived", false),
-        supabase.from("approvals").select("id, status").eq("status", "pendente"),
-        supabase.from("events").select("*").eq("is_archived", false).gte("event_date", new Date().toISOString().split("T")[0]).order("event_date").limit(5),
+        supabase.from("tasks").select("id, title, status_id, assigned_to, due_date, is_archived, created_at, updated_at, event_id").eq("is_archived", false),
+        supabase.from("approvals").select("id, status, requested_at, task_id").eq("status", "pendente"),
+        supabase.from("events").select("*").eq("is_archived", false).order("event_date"),
         supabase.from("profiles").select("id, full_name, avatar_url"),
         supabase.from("activity_log").select("*, profiles:user_id(full_name, avatar_url)").order("created_at", { ascending: false }).limit(10),
       ]);
 
       const completedStatus = statuses?.find((s) => s.name.toLowerCase().includes("conclu"));
+      setCompletedStatusId(completedStatus?.id || null);
 
       const now = new Date();
+      const today = new Date().toISOString().split("T")[0];
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
       const openTasks = tasks?.filter((t) => t.status_id !== completedStatus?.id).length || 0;
@@ -89,17 +118,58 @@ export default function Dashboard() {
       const onTime = tasksWithDue.filter((t) => new Date(t.updated_at) <= new Date(t.due_date!)).length;
       const onTimePercent = tasksWithDue.length > 0 ? Math.round((onTime / tasksWithDue.length) * 100) : 100;
 
-      setKpi({
-        openTasks,
-        completedThisMonth,
-        pendingApprovals: approvals?.length || 0,
-        onTimePercent,
+      setKpi({ openTasks, completedThisMonth, pendingApprovals: approvals?.length || 0, onTimePercent });
+
+      // Build attention items
+      const attention: AttentionItem[] = [];
+
+      // Overdue tasks
+      const overdue = tasks?.filter((t) =>
+        t.due_date && t.due_date < today && t.status_id !== completedStatus?.id
+      ) || [];
+      overdue.forEach((t) => {
+        attention.push({
+          icon: <AlertTriangle className="h-4 w-4 text-destructive" />,
+          text: `"${t.title}" está atrasada (prazo: ${format(new Date(t.due_date + "T12:00:00"), "dd/MM", { locale: ptBR })})`,
+          link: `/tarefas?status=${t.status_id}`,
+          type: 'overdue',
+        });
       });
+
+      // Pending approvals older than 48h
+      const threshold48h = subHours(now, 48);
+      approvals?.filter((a) => new Date(a.requested_at) < threshold48h).forEach((a) => {
+        attention.push({
+          icon: <Clock className="h-4 w-4 text-warning" />,
+          text: `Aprovação pendente há mais de 48h`,
+          link: `/tarefas`,
+          type: 'approval',
+        });
+      });
+
+      // Events in next 3 days with incomplete tasks
+      const threeDaysFromNow = addDays(now, 3).toISOString().split("T")[0];
+      const upcomingEvents = eventsData?.filter((e) =>
+        e.event_date && e.event_date >= today && e.event_date <= threeDaysFromNow
+      ) || [];
+      upcomingEvents.forEach((ev) => {
+        const eventTasks = tasks?.filter((t) => t.event_id === ev.id && t.status_id !== completedStatus?.id) || [];
+        if (eventTasks.length > 0) {
+          attention.push({
+            icon: <CalendarDays className="h-4 w-4 text-info" />,
+            text: `"${ev.name}" em ${format(new Date(ev.event_date + "T12:00:00"), "dd/MM", { locale: ptBR })} tem ${eventTasks.length} tarefa(s) pendente(s)`,
+            link: `/eventos`,
+            type: 'event',
+          });
+        }
+      });
+
+      setTotalAttention(attention.length);
+      setAttentionItems(attention.slice(0, 5));
 
       if (statuses && tasks) {
         setStatusData(statuses.map((s) => ({
-          id: s.id,
-          name: s.name,
+          id: s.id, name: s.name,
           count: tasks.filter((t) => t.status_id === s.id).length,
           color: s.color,
         })));
@@ -112,17 +182,13 @@ export default function Dashboard() {
         });
         setAssigneeData(
           Object.entries(assigneeCounts)
-            .map(([id, count]) => ({
-              id,
-              name: profiles.find((p) => p.id === id)?.full_name || "Sem nome",
-              count,
-            }))
+            .map(([id, count]) => ({ id, name: profiles.find((p) => p.id === id)?.full_name || "Sem nome", count }))
             .sort((a, b) => b.count - a.count)
             .slice(0, 6)
         );
       }
 
-      setEvents(eventsData || []);
+      setEvents(eventsData?.filter((e) => e.event_date && e.event_date >= today).slice(0, 5) || []);
       setActivities(activityData || []);
       setLoading(false);
     };
@@ -136,6 +202,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-32 rounded-2xl" />)}
         </div>
+        <Skeleton className="h-24 rounded-2xl" />
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-64 rounded-2xl" />)}
         </div>
@@ -144,34 +211,22 @@ export default function Dashboard() {
   }
 
   const kpiCards = [
-    { label: "Tarefas Abertas", value: kpi!.openTasks, sub: "em andamento", isPercent: false },
-    { label: "Concluídas no Mês", value: kpi!.completedThisMonth, sub: "este mês", isPercent: false },
-    { label: "Aprovações Pendentes", value: kpi!.pendingApprovals, sub: "aguardando decisão", isPercent: false },
-    { label: "Tarefas no Prazo", value: kpi!.onTimePercent, sub: "entregues dentro do prazo", isPercent: true },
+    { label: "Tarefas Abertas", value: kpi!.openTasks, sub: "em andamento", isPercent: false, onClick: () => navigate("/tarefas") },
+    { label: "Concluídas no Mês", value: kpi!.completedThisMonth, sub: "este mês", isPercent: false, onClick: () => navigate(completedStatusId ? `/tarefas?status=${completedStatusId}` : "/tarefas") },
+    { label: "Aprovações Pendentes", value: kpi!.pendingApprovals, sub: "aguardando decisão", isPercent: false, onClick: () => navigate("/tarefas") },
+    { label: "Tarefas no Prazo", value: kpi!.onTimePercent, sub: "entregues dentro do prazo", isPercent: true, onClick: () => navigate("/tarefas") },
   ];
 
   const maxStatusCount = Math.max(...statusData.map((d) => d.count), 1);
   const maxAssigneeCount = Math.max(...assigneeData.map((a) => a.count), 1);
 
-  const handleStatusClick = (statusId: string) => {
-    navigate(`/tarefas?status=${statusId}`);
-  };
-
-  const handleAssigneeClick = (assigneeId: string) => {
-    navigate(`/tarefas?assignee=${assigneeId}`);
-  };
-
-  const actionLabels: Record<string, string> = {
-    "Tarefa criada": "criou uma tarefa",
-    "Solicitação criada": "criou uma solicitação",
-    "Evento criado": "criou um evento",
-    "Status alterado": "alterou o status",
-    "Comentário adicionado": "comentou",
+  const translateAction = (action: string): string => {
+    return actionTranslations[action] || action;
   };
 
   return (
     <div className="space-y-6">
-      {/* KPIs - Crextio style */}
+      {/* KPIs */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {kpiCards.map((k, i) => {
           const cfg = kpiIconConfigs[i];
@@ -180,20 +235,15 @@ export default function Dashboard() {
               key={k.label}
               className={`card-hover cursor-pointer animate-fade-in-up stagger-${i + 1}`}
               style={{ padding: 24 }}
-              onClick={() => navigate("/tarefas")}
+              onClick={k.onClick}
             >
               <div className="space-y-3">
-                <div
-                  className="flex h-10 w-10 items-center justify-center rounded-xl"
-                  style={{ background: cfg.bg }}
-                >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: cfg.bg }}>
                   <cfg.icon className="h-5 w-5" style={{ color: cfg.color, strokeWidth: 1.8 }} />
                 </div>
-                <div>
-                  <p className="text-[32px] font-bold leading-tight animate-count-up" style={{ color: '#1A1A2E' }}>
-                    <KPIValue value={k.value} suffix={k.isPercent ? "%" : ""} />
-                  </p>
-                </div>
+                <p className="text-[32px] font-bold leading-tight" style={{ color: '#1A1A2E' }}>
+                  <KPIValue value={k.value} suffix={k.isPercent ? "%" : ""} />
+                </p>
                 <p className="text-xs" style={{ color: '#94A3B8' }}>{k.label}</p>
               </div>
             </Card>
@@ -201,19 +251,60 @@ export default function Dashboard() {
         })}
       </div>
 
+      {/* Atenção Hoje */}
+      <Card
+        className="animate-fade-in-up stagger-5"
+        style={{
+          borderLeft: attentionItems.length > 0 ? '3px solid #F59E0B' : '3px solid #10B981',
+          padding: '20px 24px',
+        }}
+      >
+        {attentionItems.length === 0 ? (
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="h-5 w-5" style={{ color: '#10B981' }} />
+            <span className="text-[13px] font-medium" style={{ color: '#10B981' }}>Tudo em dia!</span>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold" style={{ color: '#1A1A2E' }}>Atenção Hoje</h3>
+              {totalAttention > 5 && (
+                <button
+                  onClick={() => navigate("/tarefas")}
+                  className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
+                  Ver todos ({totalAttention}) <ChevronRight className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              {attentionItems.map((item, i) => (
+                <button
+                  key={i}
+                  onClick={() => navigate(item.link)}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-secondary/50"
+                >
+                  {item.icon}
+                  <span className="text-[13px] truncate" style={{ color: '#334155' }}>{item.text}</span>
+                  <ChevronRight className="h-3 w-3 ml-auto shrink-0 text-muted-foreground" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </Card>
+
       {/* Charts row */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        {/* Tasks by status - interactive */}
-        <Card className="animate-fade-in-up stagger-5">
-          <CardHeader className="pb-3">
-            <CardTitle>Tarefas por Status</CardTitle>
-          </CardHeader>
+        {/* Tasks by status */}
+        <Card className="animate-fade-in-up stagger-6">
+          <CardHeader className="pb-3"><CardTitle>Tarefas por Status</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {statusData.map((s) => (
               <button
                 key={s.id}
                 className="w-full space-y-1 text-left rounded-xl p-2 transition-colors hover:bg-secondary/50"
-                onClick={() => handleStatusClick(s.id)}
+                onClick={() => navigate(`/tarefas?status=${s.id}`)}
               >
                 <div className="flex justify-between text-[13px]">
                   <span style={{ color: '#334155' }}>{s.name}</span>
@@ -222,10 +313,7 @@ export default function Dashboard() {
                 <div className="h-2 w-full rounded-full bg-secondary">
                   <div
                     className="h-full rounded-full transition-all duration-500 ease-out"
-                    style={{
-                      width: `${Math.max((s.count / maxStatusCount) * 100, 4)}%`,
-                      backgroundColor: s.color,
-                    }}
+                    style={{ width: `${Math.max((s.count / maxStatusCount) * 100, 4)}%`, backgroundColor: s.color }}
                   />
                 </div>
               </button>
@@ -237,10 +325,8 @@ export default function Dashboard() {
         </Card>
 
         {/* Upcoming events */}
-        <Card className="animate-fade-in-up stagger-6">
-          <CardHeader className="pb-3">
-            <CardTitle>Próximos Eventos</CardTitle>
-          </CardHeader>
+        <Card className="animate-fade-in-up stagger-7">
+          <CardHeader className="pb-3"><CardTitle>Próximos Eventos</CardTitle></CardHeader>
           <CardContent>
             {events.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
@@ -275,11 +361,9 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Tasks by assignee - interactive */}
-        <Card className="animate-fade-in-up stagger-7">
-          <CardHeader className="pb-3">
-            <CardTitle>Tarefas por Responsável</CardTitle>
-          </CardHeader>
+        {/* Tasks by assignee */}
+        <Card className="animate-fade-in-up stagger-8">
+          <CardHeader className="pb-3"><CardTitle>Tarefas por Responsável</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {assigneeData.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma tarefa atribuída</p>
@@ -288,17 +372,14 @@ export default function Dashboard() {
                 <button
                   key={a.id}
                   className="w-full space-y-1 text-left rounded-xl p-2 transition-colors hover:bg-secondary/50"
-                  onClick={() => handleAssigneeClick(a.id)}
+                  onClick={() => navigate(`/tarefas?assignee=${a.id}`)}
                 >
                   <div className="flex justify-between text-[13px]">
                     <span style={{ color: '#334155' }}>{a.name}</span>
                     <span className="font-semibold" style={{ color: '#1A1A2E' }}>{a.count}</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-secondary">
-                    <div
-                      className="h-full rounded-full bg-info transition-all duration-500 ease-out"
-                      style={{ width: `${(a.count / maxAssigneeCount) * 100}%` }}
-                    />
+                    <div className="h-full rounded-full bg-info transition-all duration-500 ease-out" style={{ width: `${(a.count / maxAssigneeCount) * 100}%` }} />
                   </div>
                 </button>
               ))
@@ -306,11 +387,9 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Recent activity - enriched */}
+        {/* Recent activity */}
         <Card className="animate-fade-in-up stagger-8">
-          <CardHeader className="pb-3">
-            <CardTitle>Atividade Recente</CardTitle>
-          </CardHeader>
+          <CardHeader className="pb-3"><CardTitle>Atividade Recente</CardTitle></CardHeader>
           <CardContent>
             {activities.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma atividade registrada</p>
@@ -326,9 +405,7 @@ export default function Dashboard() {
                     <div className="min-w-0 flex-1">
                       <p className="text-[13px]" style={{ color: '#334155' }}>
                         <span className="font-medium" style={{ color: '#1A1A2E' }}>{a.profiles?.full_name || "Usuário"}</span>{" "}
-                        <span className="text-muted-foreground">
-                          {actionLabels[a.action] || a.action}
-                        </span>
+                        <span className="text-muted-foreground">{translateAction(a.action)}</span>
                         {a.details?.title && (
                           <span className="font-medium" style={{ color: '#1A1A2E' }}> "{a.details.title}"</span>
                         )}
