@@ -97,6 +97,13 @@ export default function AppLayout() {
     setUnreadCount((c) => Math.max(0, c - 1));
   };
 
+  const markAllAsRead = async () => {
+    if (!profile || unreadCount === 0) return;
+    await supabase.from("notifications").update({ is_read: true }).eq("user_id", profile.id).eq("is_read", false);
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    setUnreadCount(0);
+  };
+
   const initials = profile?.full_name
     ?.split(" ")
     .map((n) => n[0])
@@ -135,44 +142,47 @@ export default function AppLayout() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 space-y-1 px-3 py-5">
-          {visibleItems.map((item) => {
-            const active = location.pathname === item.path || location.pathname.startsWith(item.path + "/");
-            return (
-              <button
-                key={item.path}
-                onClick={() => { navigate(item.path); setMobileOpen(false); }}
-                className={cn(
-                  "relative flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm sidebar-item",
-                  active
-                    ? "font-semibold"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-                style={active ? {
-                  background: 'rgba(198, 40, 40, 0.08)',
-                  color: '#C62828',
-                } : undefined}
-                onMouseEnter={(e) => {
-                  if (!active) e.currentTarget.style.background = 'rgba(100, 116, 139, 0.06)';
-                }}
-                onMouseLeave={(e) => {
-                  if (!active) e.currentTarget.style.background = 'transparent';
-                }}
-              >
-                {active && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-sm bg-primary" />
-                )}
-                <item.icon className="h-5 w-5" style={{ strokeWidth: 1.8 }} />
-                <span className="font-medium">{item.label}</span>
-              </button>
-            );
-          })}
+        <nav className="flex-1 px-3 py-5">
+          <p className="nav-section-label mb-2">Menu</p>
+          <div className="space-y-0.5">
+            {visibleItems.map((item) => {
+              const active = location.pathname === item.path || location.pathname.startsWith(item.path + "/");
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => { navigate(item.path); setMobileOpen(false); }}
+                  className={cn(
+                    "relative flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm sidebar-item",
+                    active
+                      ? "font-semibold ring-1 ring-primary/15"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                  style={active ? {
+                    background: 'rgba(198, 40, 40, 0.08)',
+                    color: '#C62828',
+                  } : undefined}
+                  onMouseEnter={(e) => {
+                    if (!active) e.currentTarget.style.background = 'rgba(100, 116, 139, 0.06)';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!active) e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  {active && (
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-sm bg-primary" />
+                  )}
+                  <item.icon className="h-4.5 w-4.5 shrink-0" style={{ strokeWidth: 1.8, height: '18px', width: '18px' }} />
+                  <span className="font-medium">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </nav>
 
         {/* User */}
         <div className="border-t border-sidebar-border px-4 py-4">
           <div className="flex items-center gap-3">
-            <Avatar className="h-[38px] w-[38px] ring-2 ring-border">
+            <Avatar className="h-[38px] w-[38px] ring-2 ring-border shrink-0">
               <AvatarFallback className="bg-primary-light text-primary text-xs font-medium">
                 {initials}
               </AvatarFallback>
@@ -181,6 +191,13 @@ export default function AppLayout() {
               <p className="truncate text-sm font-semibold text-foreground">{profile?.full_name}</p>
               <p className="truncate text-xs text-muted-foreground">{profile ? roleLabels[profile.role] : ""}</p>
             </div>
+            <button
+              onClick={signOut}
+              className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+              title="Sair"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </aside>
@@ -203,27 +220,52 @@ export default function AppLayout() {
                 <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full hover:bg-secondary">
                   <Bell className="h-5 w-5 text-muted-foreground" style={{ strokeWidth: 1.8 }} />
                   {unreadCount > 0 && (
-                    <span className="absolute right-1.5 top-1.5 flex h-2 w-2 rounded-full bg-primary" />
+                    <span className={cn(
+                      "absolute right-1 top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white leading-none pulse-dot"
+                    )}>
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80 rounded-2xl" style={{ boxShadow: '0 8px 30px rgba(0,0,0,0.12)', maxHeight: '400px', overflowY: 'auto' }}>
-                {notifications.length === 0 ? (
-                  <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-                    Nenhuma notificação
-                  </div>
-                ) : (
-                  notifications.map((n) => (
-                    <DropdownMenuItem
-                      key={n.id}
-                      className={cn("flex flex-col items-start gap-0.5 cursor-pointer rounded-lg", !n.is_read && "bg-primary-light")}
-                      onClick={() => markAsRead(n.id)}
+              <DropdownMenuContent align="end" className="w-80 rounded-2xl p-0" style={{ boxShadow: '0 8px 30px rgba(0,0,0,0.12)' }}>
+                {/* Notifications header */}
+                <div className="flex items-center justify-between border-b px-4 py-3">
+                  <span className="text-sm font-semibold text-foreground">Notificações</span>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={markAllAsRead}
+                      className="text-xs font-medium text-primary hover:underline"
                     >
-                      <span className="text-sm font-medium">{n.title}</span>
-                      {n.message && <span className="text-xs text-muted-foreground">{n.message}</span>}
-                    </DropdownMenuItem>
-                  ))
-                )}
+                      Marcar todas como lidas
+                    </button>
+                  )}
+                </div>
+                <div style={{ maxHeight: '340px', overflowY: 'auto' }}>
+                  {notifications.length === 0 ? (
+                    <div className="px-4 py-8 text-center">
+                      <Bell className="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
+                      <p className="text-sm text-muted-foreground">Nenhuma notificação</p>
+                    </div>
+                  ) : (
+                    notifications.map((n) => (
+                      <DropdownMenuItem
+                        key={n.id}
+                        className={cn(
+                          "flex flex-col items-start gap-0.5 cursor-pointer rounded-none px-4 py-3 border-b last:border-0",
+                          !n.is_read && "bg-primary/5"
+                        )}
+                        onClick={() => markAsRead(n.id)}
+                      >
+                        <div className="flex w-full items-center gap-2">
+                          {!n.is_read && <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />}
+                          <span className="text-sm font-medium flex-1">{n.title}</span>
+                        </div>
+                        {n.message && <span className="text-xs text-muted-foreground pl-3.5">{n.message}</span>}
+                      </DropdownMenuItem>
+                    ))
+                  )}
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
 

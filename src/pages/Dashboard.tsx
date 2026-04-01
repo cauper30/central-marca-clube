@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckSquare, Clock, ThumbsUp, Target, CalendarDays, AlertTriangle, CheckCircle2, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { format, isAfter, subHours, addDays, isBefore } from "date-fns";
+import { format, subHours, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface KPI {
@@ -50,11 +50,43 @@ function KPIValue({ value, suffix = "" }: { value: number; suffix?: string }) {
 }
 
 const kpiIconConfigs = [
-  { icon: CheckSquare, bg: '#EFF6FF', color: '#3B82F6' },
-  { icon: Target, bg: '#ECFDF5', color: '#10B981' },
-  { icon: ThumbsUp, bg: '#FFFBEB', color: '#F59E0B' },
-  { icon: Clock, bg: '#FEF2F2', color: '#EF4444' },
+  { icon: CheckSquare, bg: '#EFF6FF', color: '#3B82F6', topBorder: '#3B82F6' },
+  { icon: Target, bg: '#ECFDF5', color: '#10B981', topBorder: '#10B981' },
+  { icon: ThumbsUp, bg: '#FFFBEB', color: '#F59E0B', topBorder: '#F59E0B' },
+  { icon: Clock, bg: '#FEF2F2', color: '#EF4444', topBorder: '#EF4444' },
 ];
+
+const attentionTypeConfig = {
+  overdue: {
+    bg: 'rgba(239, 68, 68, 0.05)',
+    border: '#EF4444',
+  },
+  approval: {
+    bg: 'rgba(245, 158, 11, 0.05)',
+    border: '#F59E0B',
+  },
+  event: {
+    bg: 'rgba(59, 130, 246, 0.05)',
+    border: '#3B82F6',
+  },
+};
+
+const eventStatusConfig: Record<string, { label: string; color: string; bg: string }> = {
+  planejamento: { label: 'Planejamento', color: '#1565C0', bg: '#EFF6FF' },
+  confirmado: { label: 'Confirmado', color: '#2E7D32', bg: '#F0FDF4' },
+  em_andamento: { label: 'Em andamento', color: '#F57F17', bg: '#FFFBEB' },
+  concluido: { label: 'Concluído', color: '#4CAF50', bg: '#F0FDF4' },
+  cancelado: { label: 'Cancelado', color: '#B71C1C', bg: '#FEF2F2' },
+};
+
+const avatarColors = [
+  '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316', '#6366F1',
+];
+
+function getAvatarColor(name: string): string {
+  const code = name ? name.charCodeAt(0) % avatarColors.length : 0;
+  return avatarColors[code];
+}
 
 const actionTranslations: Record<string, string> = {
   "Tarefa criada": "criou uma tarefa",
@@ -214,7 +246,7 @@ export default function Dashboard() {
     { label: "Tarefas Abertas", value: kpi!.openTasks, sub: "em andamento", isPercent: false, onClick: () => navigate("/tarefas") },
     { label: "Concluídas no Mês", value: kpi!.completedThisMonth, sub: "este mês", isPercent: false, onClick: () => navigate(completedStatusId ? `/tarefas?status=${completedStatusId}` : "/tarefas") },
     { label: "Aprovações Pendentes", value: kpi!.pendingApprovals, sub: "aguardando decisão", isPercent: false, onClick: () => navigate("/tarefas") },
-    { label: "Tarefas no Prazo", value: kpi!.onTimePercent, sub: "entregues dentro do prazo", isPercent: true, onClick: () => navigate("/tarefas") },
+    { label: "Tarefas no Prazo", value: kpi!.onTimePercent, sub: "entregues no prazo", isPercent: true, onClick: () => navigate("/tarefas") },
   ];
 
   const maxStatusCount = Math.max(...statusData.map((d) => d.count), 1);
@@ -233,18 +265,25 @@ export default function Dashboard() {
           return (
             <Card
               key={k.label}
-              className={`card-hover cursor-pointer animate-fade-in-up stagger-${i + 1}`}
-              style={{ padding: 24 }}
+              className={`card-hover cursor-pointer animate-fade-in-up stagger-${i + 1} overflow-hidden`}
+              style={{ padding: 0 }}
               onClick={k.onClick}
             >
-              <div className="space-y-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: cfg.bg }}>
-                  <cfg.icon className="h-5 w-5" style={{ color: cfg.color, strokeWidth: 1.8 }} />
+              {/* Colored top accent bar */}
+              <div className="h-1 w-full" style={{ background: cfg.topBorder }} />
+              <div className="p-6 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <p className="text-[13px] font-medium" style={{ color: '#64748B' }}>{k.label}</p>
+                    <p className="text-[36px] font-bold leading-none" style={{ color: '#1A1A2E' }}>
+                      <KPIValue value={k.value} suffix={k.isPercent ? "%" : ""} />
+                    </p>
+                  </div>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl shrink-0" style={{ background: cfg.bg }}>
+                    <cfg.icon className="h-5 w-5" style={{ color: cfg.color, strokeWidth: 1.8 }} />
+                  </div>
                 </div>
-                <p className="text-[32px] font-bold leading-tight" style={{ color: '#1A1A2E' }}>
-                  <KPIValue value={k.value} suffix={k.isPercent ? "%" : ""} />
-                </p>
-                <p className="text-xs" style={{ color: '#94A3B8' }}>{k.label}</p>
+                <p className="text-xs" style={{ color: '#94A3B8' }}>{k.sub}</p>
               </div>
             </Card>
           );
@@ -253,7 +292,7 @@ export default function Dashboard() {
 
       {/* Atenção Hoje */}
       <Card
-        className="animate-fade-in-up stagger-5"
+        className="animate-fade-in-up stagger-5 overflow-hidden"
         style={{
           borderLeft: attentionItems.length > 0 ? '3px solid #F59E0B' : '3px solid #10B981',
           padding: '20px 24px',
@@ -262,33 +301,45 @@ export default function Dashboard() {
         {attentionItems.length === 0 ? (
           <div className="flex items-center gap-3">
             <CheckCircle2 className="h-5 w-5" style={{ color: '#10B981' }} />
-            <span className="text-[13px] font-medium" style={{ color: '#10B981' }}>Tudo em dia!</span>
+            <span className="text-[13px] font-medium" style={{ color: '#10B981' }}>Tudo em dia! Nenhuma pendência crítica.</span>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold" style={{ color: '#1A1A2E' }}>Atenção Hoje</h3>
+              <h3 className="text-sm font-semibold" style={{ color: '#1A1A2E' }}>
+                Atenção Hoje
+                <span className="ml-2 inline-flex items-center justify-center rounded-full bg-warning/15 text-warning text-xs px-2 py-0.5 font-bold">
+                  {totalAttention}
+                </span>
+              </h3>
               {totalAttention > 5 && (
                 <button
                   onClick={() => navigate("/tarefas")}
                   className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                 >
-                  Ver todos ({totalAttention}) <ChevronRight className="h-3 w-3" />
+                  Ver todos <ChevronRight className="h-3 w-3" />
                 </button>
               )}
             </div>
-            <div className="space-y-1.5">
-              {attentionItems.map((item, i) => (
-                <button
-                  key={i}
-                  onClick={() => navigate(item.link)}
-                  className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-secondary/50"
-                >
-                  {item.icon}
-                  <span className="text-[13px] truncate" style={{ color: '#334155' }}>{item.text}</span>
-                  <ChevronRight className="h-3 w-3 ml-auto shrink-0 text-muted-foreground" />
-                </button>
-              ))}
+            <div className="space-y-2">
+              {attentionItems.map((item, i) => {
+                const typeCfg = attentionTypeConfig[item.type];
+                return (
+                  <button
+                    key={i}
+                    onClick={() => navigate(item.link)}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors hover:brightness-95"
+                    style={{
+                      background: typeCfg.bg,
+                      borderLeft: `3px solid ${typeCfg.border}`,
+                    }}
+                  >
+                    {item.icon}
+                    <span className="text-[13px] truncate flex-1" style={{ color: '#334155' }}>{item.text}</span>
+                    <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -330,32 +381,43 @@ export default function Dashboard() {
           <CardContent>
             {events.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                <CalendarDays className="mb-2 h-8 w-8" />
+                <CalendarDays className="mb-2 h-8 w-8 opacity-30" />
                 <p className="text-sm">Nenhum evento próximo</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {events.map((e) => (
-                  <div
-                    key={e.id}
-                    className="flex items-center gap-3 rounded-xl border p-3 cursor-pointer card-hover"
-                    style={{ borderColor: 'rgba(226, 232, 240, 0.6)' }}
-                    onClick={() => navigate("/eventos")}
-                  >
-                    <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl" style={{ background: '#EFF6FF' }}>
-                      <span className="text-xs font-semibold leading-none" style={{ color: '#3B82F6' }}>
-                        {e.event_date ? format(new Date(e.event_date + "T12:00:00"), "dd", { locale: ptBR }) : "—"}
-                      </span>
-                      <span className="text-[10px] uppercase leading-none" style={{ color: '#3B82F6' }}>
-                        {e.event_date ? format(new Date(e.event_date + "T12:00:00"), "MMM", { locale: ptBR }) : ""}
-                      </span>
+              <div className="space-y-2.5">
+                {events.map((e) => {
+                  const statusCfg = eventStatusConfig[e.status] || eventStatusConfig['planejamento'];
+                  return (
+                    <div
+                      key={e.id}
+                      className="flex items-center gap-3 rounded-xl border p-3 cursor-pointer card-hover"
+                      style={{ borderColor: 'rgba(226, 232, 240, 0.6)' }}
+                      onClick={() => navigate("/eventos")}
+                    >
+                      <div className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl" style={{ background: '#EFF6FF' }}>
+                        <span className="text-xs font-semibold leading-none" style={{ color: '#3B82F6' }}>
+                          {e.event_date ? format(new Date(e.event_date + "T12:00:00"), "dd", { locale: ptBR }) : "—"}
+                        </span>
+                        <span className="text-[10px] uppercase leading-none" style={{ color: '#3B82F6' }}>
+                          {e.event_date ? format(new Date(e.event_date + "T12:00:00"), "MMM", { locale: ptBR }) : ""}
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-medium" style={{ color: '#1A1A2E' }}>{e.name}</p>
+                        {e.location && <p className="truncate text-xs text-muted-foreground">{e.location}</p>}
+                      </div>
+                      {e.status && (
+                        <span
+                          className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium"
+                          style={{ background: statusCfg.bg, color: statusCfg.color }}
+                        >
+                          {statusCfg.label}
+                        </span>
+                      )}
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-medium" style={{ color: '#1A1A2E' }}>{e.name}</p>
-                      {e.location && <p className="truncate text-xs text-muted-foreground">{e.location}</p>}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
@@ -394,28 +456,32 @@ export default function Dashboard() {
             {activities.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma atividade registrada</p>
             ) : (
-              <div className="space-y-3">
-                {activities.map((a: any) => (
-                  <div key={a.id} className="flex items-start gap-3">
-                    <Avatar className="h-7 w-7 mt-0.5 shrink-0">
-                      <AvatarFallback className="text-[10px] bg-secondary">
-                        {a.profiles?.full_name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2) || "?"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px]" style={{ color: '#334155' }}>
-                        <span className="font-medium" style={{ color: '#1A1A2E' }}>{a.profiles?.full_name || "Usuário"}</span>{" "}
-                        <span className="text-muted-foreground">{translateAction(a.action)}</span>
-                        {a.details?.title && (
-                          <span className="font-medium" style={{ color: '#1A1A2E' }}> "{a.details.title}"</span>
-                        )}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(a.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                      </p>
+              <div className="divide-y divide-border/50">
+                {activities.map((a: any) => {
+                  const name = a.profiles?.full_name || "Usuário";
+                  const avatarColor = getAvatarColor(name);
+                  return (
+                    <div key={a.id} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
+                      <Avatar className="h-7 w-7 mt-0.5 shrink-0">
+                        <AvatarFallback className="text-[10px] font-medium text-white" style={{ backgroundColor: avatarColor }}>
+                          {name.split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13px]" style={{ color: '#334155' }}>
+                          <span className="font-medium" style={{ color: '#1A1A2E' }}>{name}</span>{" "}
+                          <span className="text-muted-foreground">{translateAction(a.action)}</span>
+                          {a.details?.title && (
+                            <span className="font-medium" style={{ color: '#1A1A2E' }}> "{a.details.title}"</span>
+                          )}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(a.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
