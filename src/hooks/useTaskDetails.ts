@@ -235,7 +235,7 @@ export function useSubmitApproval() {
 export function useUpdateTask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, actor_id, ...updates }: { id: string; actor_id?: string; [key: string]: any }) => {
+    mutationFn: async ({ id, actor_id, ...updates }: { id: string; actor_id?: string } & Record<string, unknown>) => {
       const { error } = await supabase.from("tasks").update(updates).eq("id", id);
       if (error) throw error;
 

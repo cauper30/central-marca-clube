@@ -3,126 +3,72 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useActivityLog, useActivityLogFilterOptions } from "@/hooks/useActivityLog";
-import { useProfiles } from "@/hooks/useTasks";
+import { ActivityLogRow, useActivityLog } from "@/hooks/useActivityLog";
 
 export default function ConfigLogs() {
   const navigate = useNavigate();
+  const [entityType, setEntityType] = useState("");
+  const [action, setAction] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
-  const [user, setUser] = useState("all");
-  const [entityType, setEntityType] = useState("all");
-  const [action, setAction] = useState("all");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
 
   const filters = useMemo(
     () => ({
-      user,
-      entity_type: entityType,
-      action,
-      start_date: startDate || undefined,
-      end_date: endDate || undefined,
+      entityType: entityType || undefined,
+      action: action || undefined,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
+      page,
+      pageSize: 15,
     }),
-    [user, entityType, action, startDate, endDate]
+    [entityType, action, dateFrom, dateTo, page]
   );
 
-  const { data: profiles = [] } = useProfiles();
-  const { data: options } = useActivityLogFilterOptions();
-  const { data, isLoading } = useActivityLog({ page, pageSize: 20, filters });
-
-  const totalPages = data?.totalPages || 1;
+  const { data, isLoading } = useActivityLog(filters);
 
   return (
     <div className="space-y-4">
       <Button variant="ghost" size="sm" onClick={() => navigate("/config")}>
         <ArrowLeft className="mr-1.5 h-4 w-4" /> Voltar
       </Button>
-
-      <div>
-        <h2 className="text-lg font-bold text-foreground">Logs de Atividade</h2>
-        <p className="text-sm text-muted-foreground">Histórico de ações no sistema com filtros por usuário, entidade, ação e período.</p>
-      </div>
+      <h2 className="text-lg font-bold text-foreground">Logs de Atividade</h2>
 
       <Card className="p-4 space-y-3">
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          <Select
-            value={user}
-            onValueChange={(value) => {
-              setUser(value);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Usuário" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os usuários</SelectItem>
-              {profiles.map((profile) => (
-                <SelectItem key={profile.id} value={profile.id}>
-                  {profile.full_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={entityType}
-            onValueChange={(value) => {
-              setEntityType(value);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Tipo de entidade" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os tipos</SelectItem>
-              {options?.entityTypes.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {type}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={action}
-            onValueChange={(value) => {
-              setAction(value);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Ação" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as ações</SelectItem>
-              {options?.actions.map((item) => (
-                <SelectItem key={item} value={item}>
-                  {item}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
+        <div className="grid gap-2 md:grid-cols-4">
           <Input
-            type="date"
-            value={startDate}
-            onChange={(event) => {
-              setStartDate(event.target.value);
+            placeholder="Entidade (task, event...)"
+            value={entityType}
+            onChange={(e) => {
+              setEntityType(e.target.value);
+              setPage(1);
+            }}
+          />
+          <Input
+            placeholder="Ação"
+            value={action}
+            onChange={(e) => {
+              setAction(e.target.value);
               setPage(1);
             }}
           />
           <Input
             type="date"
-            value={endDate}
-            onChange={(event) => {
-              setEndDate(event.target.value);
+            value={dateFrom}
+            onChange={(e) => {
+              setDateFrom(e.target.value);
+              setPage(1);
+            }}
+          />
+          <Input
+            type="date"
+            value={dateTo}
+            onChange={(e) => {
+              setDateTo(e.target.value);
               setPage(1);
             }}
           />
@@ -135,38 +81,38 @@ export default function ConfigLogs() {
             <TableRow>
               <TableHead>Data</TableHead>
               <TableHead>Usuário</TableHead>
-              <TableHead>Entidade</TableHead>
               <TableHead>Ação</TableHead>
+              <TableHead>Entidade</TableHead>
               <TableHead>Detalhes</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
-                  Carregando logs...
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  Carregando...
                 </TableCell>
               </TableRow>
-            ) : data?.data.length ? (
-              data.data.map((log: any) => (
-                <TableRow key={log.id}>
+            ) : (data?.rows.length ?? 0) === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  Nenhum log encontrado.
+                </TableCell>
+              </TableRow>
+            ) : (
+              data?.rows.map((row: ActivityLogRow) => (
+                <TableRow key={row.id}>
                   <TableCell className="text-xs">
-                    {format(new Date(log.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                    {format(new Date(row.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                   </TableCell>
-                  <TableCell>{log.profiles?.full_name || "Sistema"}</TableCell>
-                  <TableCell className="text-xs">{log.entity_type}</TableCell>
-                  <TableCell>{log.action}</TableCell>
-                  <TableCell className="max-w-[320px] truncate text-xs text-muted-foreground">
-                    {log.details ? JSON.stringify(log.details) : "—"}
+                  <TableCell className="text-sm">{row.profiles?.full_name || "—"}</TableCell>
+                  <TableCell className="text-sm">{row.action}</TableCell>
+                  <TableCell className="text-sm">{row.entity_type}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {row.details ? JSON.stringify(row.details) : "—"}
                   </TableCell>
                 </TableRow>
               ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
-                  Nenhum registro encontrado para os filtros selecionados.
-                </TableCell>
-              </TableRow>
             )}
           </TableBody>
         </Table>
@@ -174,25 +120,17 @@ export default function ConfigLogs() {
 
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
-          Total: {data?.count || 0} registro(s)
+          Página {data?.page ?? 1} de {data?.totalPages ?? 1} • {data?.total ?? 0} registros
         </p>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-            disabled={page === 1}
-          >
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={(data?.page ?? 1) <= 1}>
             Anterior
           </Button>
-          <span className="text-sm text-muted-foreground">
-            Página {page} de {totalPages}
-          </span>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-            disabled={page >= totalPages}
+            onClick={() => setPage((p) => p + 1)}
+            disabled={(data?.page ?? 1) >= (data?.totalPages ?? 1)}
           >
             Próxima
           </Button>

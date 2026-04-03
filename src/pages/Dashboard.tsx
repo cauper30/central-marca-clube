@@ -22,6 +22,21 @@ interface AttentionItem {
   type: 'overdue' | 'approval' | 'event';
 }
 
+interface DashboardEvent {
+  id: string;
+  name: string;
+  event_date: string | null;
+  status: string;
+}
+
+interface ActivityItem {
+  id: string;
+  action: string;
+  created_at: string;
+  details?: { title?: string } | null;
+  profiles?: { full_name?: string | null } | null;
+}
+
 /* Animated counter hook */
 function useCountUp(target: number, duration = 600) {
   const [value, setValue] = useState(0);
@@ -109,9 +124,9 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [kpi, setKpi] = useState<KPI | null>(null);
   const [statusData, setStatusData] = useState<{ id: string; name: string; count: number; color: string }[]>([]);
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<DashboardEvent[]>([]);
   const [assigneeData, setAssigneeData] = useState<{ id: string; name: string; count: number }[]>([]);
-  const [activities, setActivities] = useState<any[]>([]);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [attentionItems, setAttentionItems] = useState<AttentionItem[]>([]);
   const [totalAttention, setTotalAttention] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -457,7 +472,7 @@ export default function Dashboard() {
               <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma atividade registrada</p>
             ) : (
               <div className="divide-y divide-border/50">
-                {activities.map((a: any) => {
+                {activities.map((a: ActivityItem) => {
                   const name = a.profiles?.full_name || "Usuário";
                   const avatarColor = getAvatarColor(name);
                   return (

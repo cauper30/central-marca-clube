@@ -2,86 +2,55 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface ActivityLogFilters {
-  user?: string;
-  entity_type?: string;
+  userId?: string;
+  entityType?: string;
   action?: string;
-  start_date?: string;
-  end_date?: string;
-}
-
-interface UseActivityLogParams {
+  dateFrom?: string;
+  dateTo?: string;
   page?: number;
   pageSize?: number;
-  filters?: ActivityLogFilters;
 }
 
-export function useActivityLog({
-  page = 1,
-  pageSize = 20,
-  filters = {},
-}: UseActivityLogParams) {
-  return useQuery({
-    queryKey: ["activity_log", "paginated", page, pageSize, filters],
-    queryFn: async () => {
-      const from = (page - 1) * pageSize;
-      const to = from + pageSize - 1;
+export interface ActivityLogRow {
+  id: string;
+  action: string;
+  entity_type: string;
+  details: unknown;
+  created_at: string;
+  profiles?: { full_name?: string | null } | null;
+}
 
+export function useActivityLog(filters: ActivityLogFilters = {}) {
+  const page = filters.page ?? 1;
+  const pageSize = filters.pageSize ?? 20;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  return useQuery({
+    queryKey: ["activity_log_paginated", filters],
+    queryFn: async () => {
       let query = supabase
         .from("activity_log")
-        .select("*, profiles:user_id(full_name, email)", { count: "exact" })
+        .select("*, profiles:user_id(id, full_name, avatar_url)", { count: "exact" })
         .order("created_at", { ascending: false })
         .range(from, to);
 
-      if (filters.user && filters.user !== "all") {
-        query = query.eq("user_id", filters.user);
-      }
-
-      if (filters.entity_type && filters.entity_type !== "all") {
-        query = query.eq("entity_type", filters.entity_type);
-      }
-
-      if (filters.action && filters.action !== "all") {
-        query = query.eq("action", filters.action);
-      }
-
-      if (filters.start_date) {
-        query = query.gte("created_at", `${filters.start_date}T00:00:00`);
-      }
-
-      if (filters.end_date) {
-        query = query.lte("created_at", `${filters.end_date}T23:59:59`);
-      }
+      if (filters.userId) query = query.eq("user_id", filters.userId);
+      if (filters.entityType) query = query.eq("entity_type", filters.entityType);
+      if (filters.action) query = query.ilike("action", `%${filters.action}%`);
+      if (filters.dateFrom) query = query.gte("created_at", `${filters.dateFrom}T00:00:00`);
+      if (filters.dateTo) query = query.lte("created_at", `${filters.dateTo}T23:59:59`);
 
       const { data, error, count } = await query;
       if (error) throw error;
 
       return {
-        data: data || [],
-        count: count || 0,
+        rows: (data ?? []) as ActivityLogRow[],
+        total: count ?? 0,
         page,
         pageSize,
-        totalPages: Math.max(1, Math.ceil((count || 0) / pageSize)),
+        totalPages: Math.max(1, Math.ceil((count ?? 0) / pageSize)),
       };
-    },
-  });
-}
-
-export function useActivityLogFilterOptions() {
-  return useQuery({
-    queryKey: ["activity_log", "filter_options"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("activity_log")
-        .select("action, entity_type")
-        .order("created_at", { ascending: false })
-        .limit(1000);
-
-      if (error) throw error;
-
-      const actions = Array.from(new Set((data || []).map((item) => item.action))).filter(Boolean);
-      const entityTypes = Array.from(new Set((data || []).map((item) => item.entity_type))).filter(Boolean);
-
-      return { actions, entityTypes };
     },
   });
 }
