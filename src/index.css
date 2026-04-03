@@ -191,14 +191,12 @@
 
   /* Glassmorphism header */
   .glass-header {
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: linear-gradient(90deg, #C62828 0%, #8B0000 100%);
   }
 
   /* Sidebar gradient */
   .sidebar-gradient {
-    background: linear-gradient(180deg, #F8F9FC 0%, #EEF0F7 100%);
+    background: linear-gradient(180deg, #C62828 0%, #8B0000 100%);
   }
 
   /* Kanban drag styles */
@@ -224,7 +222,7 @@
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: hsl(var(--muted-foreground));
+    color: rgba(255, 255, 255, 0.75);
     padding: 0 1rem;
     margin-bottom: 0.25rem;
     margin-top: 0.5rem;

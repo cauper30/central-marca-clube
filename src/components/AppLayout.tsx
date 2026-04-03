@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Bell, Menu, X, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
@@ -20,13 +20,20 @@ const roleLabels: Record<string, string> = {
   gestor: "Gestor",
 };
 
+interface NotificationItem {
+  id: string;
+  title: string;
+  message?: string | null;
+  is_read: boolean;
+}
+
 export default function AppLayout() {
   const { profile, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   const visibleItems = profile ? getMenuItems(profile.role as UserRole) : [];
 
@@ -56,7 +63,7 @@ export default function AppLayout() {
         table: "notifications",
         filter: `user_id=eq.${profile.id}`,
       }, (payload) => {
-        setNotifications((prev) => [payload.new as any, ...prev].slice(0, 10));
+        setNotifications((prev) => [payload.new as NotificationItem, ...prev].slice(0, 10));
         setUnreadCount((c) => c + 1);
       })
       .subscribe();
@@ -106,11 +113,11 @@ export default function AppLayout() {
             CM
           </div>
           <div>
-            <p className="text-sm font-semibold text-foreground leading-tight">Central de Marketing</p>
-            <p className="text-xs text-muted-foreground">Clube Pirassununga</p>
+            <p className="text-sm font-semibold text-white leading-tight">Central de Marketing</p>
+            <p className="text-xs text-white/70">Clube Pirassununga</p>
           </div>
           <button className="ml-auto md:hidden" onClick={() => setMobileOpen(false)}>
-            <X className="h-5 w-5 text-muted-foreground" />
+            <X className="h-5 w-5 text-white/70" />
           </button>
         </div>
 
@@ -127,22 +134,21 @@ export default function AppLayout() {
                   className={cn(
                     "relative flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm sidebar-item",
                     active
-                      ? "font-semibold ring-1 ring-primary/15"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "font-semibold ring-1 ring-white/30 text-white"
+                      : "text-white/80 hover:text-white"
                   )}
                   style={active ? {
-                    background: 'rgba(198, 40, 40, 0.08)',
-                    color: '#C62828',
+                    background: "rgba(255,255,255,0.16)",
                   } : undefined}
                   onMouseEnter={(e) => {
-                    if (!active) e.currentTarget.style.background = 'rgba(100, 116, 139, 0.06)';
+                    if (!active) e.currentTarget.style.background = "rgba(255,255,255,0.10)";
                   }}
                   onMouseLeave={(e) => {
                     if (!active) e.currentTarget.style.background = 'transparent';
                   }}
                 >
                   {active && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-sm bg-primary" />
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-sm bg-white" />
                   )}
                   <item.icon className="h-4.5 w-4.5 shrink-0" style={{ strokeWidth: 1.8, height: '18px', width: '18px' }} />
                   <span className="font-medium">{item.label}</span>
@@ -156,13 +162,14 @@ export default function AppLayout() {
         <div className="border-t border-sidebar-border px-4 py-4">
           <div className="flex items-center gap-3">
             <Avatar className="h-[38px] w-[38px] ring-2 ring-border shrink-0">
+              <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || "avatar"} />
               <AvatarFallback className="bg-primary-light text-primary text-xs font-medium">
                 {initials}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-foreground">{profile?.full_name}</p>
-              <p className="truncate text-xs text-muted-foreground">{profile ? roleLabels[profile.role] : ""}</p>
+              <p className="truncate text-sm font-semibold text-white">{profile?.full_name}</p>
+              <p className="truncate text-xs text-white/70">{profile ? roleLabels[profile.role] : ""}</p>
             </div>
             <button
               onClick={signOut}
@@ -178,20 +185,20 @@ export default function AppLayout() {
       {/* Main area */}
       <div className="flex flex-1 flex-col min-w-0">
         {/* Header */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b px-4 md:px-7 glass-header" style={{ borderColor: 'rgba(226, 232, 240, 0.5)' }}>
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b px-4 md:px-7 text-white" style={{ borderColor: "rgba(255,255,255,0.18)", background: "linear-gradient(90deg, #C62828 0%, #8B0000 100%)" }}>
           <div className="flex items-center gap-3">
             <button className="md:hidden" onClick={() => setMobileOpen(true)}>
-              <Menu className="h-5 w-5 text-muted-foreground" />
+              <Menu className="h-5 w-5 text-white" />
             </button>
-            <h1 className="text-[22px] font-bold" style={{ color: '#1A1A2E' }}>{pageTitle}</h1>
+            <h1 className="text-[22px] font-bold text-white">{pageTitle}</h1>
           </div>
 
           <div className="flex items-center gap-2">
             {/* Notifications */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full hover:bg-secondary">
-                  <Bell className="h-5 w-5 text-muted-foreground" style={{ strokeWidth: 1.8 }} />
+                <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full hover:bg-white/10">
+                  <Bell className="h-5 w-5 text-white" style={{ strokeWidth: 1.8 }} />
                   {unreadCount > 0 && (
                     <span className={cn(
                       "absolute right-1 top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white leading-none pulse-dot"
@@ -247,6 +254,7 @@ export default function AppLayout() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="rounded-full">
                   <Avatar className="h-[34px] w-[34px] transition-all hover:ring-2 hover:ring-border">
+                    <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || "avatar"} />
                     <AvatarFallback className="bg-primary-light text-primary text-xs font-medium">
                       {initials}
                     </AvatarFallback>
