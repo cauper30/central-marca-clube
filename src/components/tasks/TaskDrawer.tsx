@@ -59,11 +59,11 @@ export default function TaskDrawer({ task, open, onClose }: Props) {
     ? Math.round((checklists.filter((c) => c.is_completed).length / checklists.length) * 100) : 0;
 
   const handleStatusChange = (statusId: string) => {
-    updateTask.mutate({ id: task.id, status_id: statusId });
+    updateTask.mutate({ id: task.id, status_id: statusId, actor_id: user?.id });
   };
 
   const handleAssigneeChange = (assigneeId: string) => {
-    updateTask.mutate({ id: task.id, assigned_to: assigneeId === "none" ? null : assigneeId });
+    updateTask.mutate({ id: task.id, assigned_to: assigneeId === "none" ? null : assigneeId, actor_id: user?.id });
   };
 
   const handleAddComment = () => {
@@ -191,7 +191,7 @@ export default function TaskDrawer({ task, open, onClose }: Props) {
                         <Checkbox
                           checked={c.is_completed}
                           onCheckedChange={(checked) =>
-                            toggleChecklist.mutate({ id: c.id, is_completed: !!checked })
+                            toggleChecklist.mutate({ id: c.id, is_completed: !!checked, task_id: task.id, user_id: user?.id })
                           }
                         />
                         <span className={c.is_completed ? "line-through text-muted-foreground" : ""}>{c.title}</span>
@@ -213,7 +213,7 @@ export default function TaskDrawer({ task, open, onClose }: Props) {
                       <Checkbox
                         checked={s.is_completed}
                         onCheckedChange={(checked) =>
-                          toggleSubtask.mutate({ id: s.id, is_completed: !!checked })
+                          toggleSubtask.mutate({ id: s.id, is_completed: !!checked, task_id: task.id, user_id: user?.id })
                         }
                       />
                       <span className={s.is_completed ? "line-through text-muted-foreground" : ""}>{s.title}</span>

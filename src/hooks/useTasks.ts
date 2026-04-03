@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { logActivity } from "@/lib/activityLog";
 
 type Tables<T extends keyof Database["public"]["Tables"]> = Database["public"]["Tables"][T]["Row"];
 type TaskPriority = Database["public"]["Enums"]["task_priority"];
@@ -108,9 +109,17 @@ export function useEvents() {
 export function useUpdateTaskStatus() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ taskId, statusId }: { taskId: string; statusId: string }) => {
+    mutationFn: async ({ taskId, statusId, userId }: { taskId: string; statusId: string; userId?: string }) => {
       const { error } = await supabase.from("tasks").update({ status_id: statusId }).eq("id", taskId);
       if (error) throw error;
+
+      await logActivity({
+        userId,
+        action: "Status da tarefa atualizado",
+        entityType: "task",
+        entityId: taskId,
+        details: { status_id: statusId },
+      });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
   });
@@ -141,13 +150,12 @@ export function useCreateTask() {
         await supabase.from("task_tags").insert(tag_ids.map((tag_id) => ({ task_id: data.id, tag_id })));
       }
 
-      // Log activity
-      await supabase.from("activity_log").insert({
-        user_id: task.created_by,
+      await logActivity({
+        userId: task.created_by,
         action: task.is_demand ? "Solicitação criada" : "Tarefa criada",
-        entity_type: "task",
-        entity_id: data.id,
-        details: { title: task.title },
+        entityType: "task",
+        entityId: data.id,
+        details: { title: task.title, tag_ids: tag_ids || [] },
       });
 
       return data;

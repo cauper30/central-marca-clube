@@ -27,9 +27,10 @@ interface Props {
   statuses: Tables<"task_statuses">[];
   loading: boolean;
   onTaskClick: (task: Task) => void;
+  userId?: string;
 }
 
-export default function KanbanView({ tasks, statuses, loading, onTaskClick }: Props) {
+export default function KanbanView({ tasks, statuses, loading, onTaskClick, userId }: Props) {
   const updateStatus = useUpdateTaskStatus();
 
   const handleDragEnd = (result: DropResult) => {
@@ -37,7 +38,7 @@ export default function KanbanView({ tasks, statuses, loading, onTaskClick }: Pr
     const newStatusId = result.destination.droppableId;
     const taskId = result.draggableId;
     if (newStatusId === result.source.droppableId) return;
-    updateStatus.mutate({ taskId, statusId: newStatusId });
+    updateStatus.mutate({ taskId, statusId: newStatusId, userId });
   };
 
   const today = new Date().toISOString().split("T")[0];

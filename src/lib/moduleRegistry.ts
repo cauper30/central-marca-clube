@@ -10,6 +10,7 @@ import {
   Columns3,
   FormInput,
   Settings as SettingsIcon,
+  History,
 } from "lucide-react";
 
 export type UserRole =
@@ -134,6 +135,17 @@ export const configSubModules: ConfigSubModule[] = [
     icon: SettingsIcon,
     component: lazy(() => import("@/pages/config/ConfigGeral")),
     pageTitle: "Configurações Gerais",
+    section: "Sistema",
+  },
+
+  {
+    id: "config-logs",
+    label: "Logs de Atividade",
+    description: "Auditoria de ações e mudanças",
+    path: "logs",
+    icon: History,
+    component: lazy(() => import("@/pages/config/ConfigLogs")),
+    pageTitle: "Logs de Atividade",
     section: "Sistema",
   },
 ];

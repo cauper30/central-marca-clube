@@ -154,6 +154,7 @@ export default function Tarefas() {
           statuses={statuses}
           loading={isLoading}
           onTaskClick={openDrawer}
+          userId={user?.id}
         />
       )}
       {view === "lista" && (

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { logActivity } from "@/lib/activityLog";
 
 type EventRow = Database["public"]["Tables"]["events"]["Row"];
 
@@ -72,12 +73,12 @@ export function useCreateEvent() {
     }) => {
       const { data, error } = await supabase.from("events").insert([event]).select("id").single();
       if (error) throw error;
-      await supabase.from("activity_log").insert({
-        user_id: event.created_by,
+      await logActivity({
+        userId: event.created_by,
         action: "Evento criado",
-        entity_type: "event",
-        entity_id: data.id,
-        details: { name: event.name },
+        entityType: "event",
+        entityId: data.id,
+        details: { name: event.name, status: event.status || "planejamento" },
       });
       return data;
     },

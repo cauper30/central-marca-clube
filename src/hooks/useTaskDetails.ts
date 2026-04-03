@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logActivity } from "@/lib/activityLog";
 
 export function useChecklists(taskId: string | null) {
   return useQuery({
@@ -116,33 +117,96 @@ export function useTaskActivity(taskId: string | null) {
 export function useToggleChecklist() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, is_completed }: { id: string; is_completed: boolean }) => {
+    mutationFn: async ({
+      id,
+      is_completed,
+      task_id,
+      user_id,
+    }: {
+      id: string;
+      is_completed: boolean;
+      task_id: string;
+      user_id?: string;
+    }) => {
       const { error } = await supabase.from("checklists").update({ is_completed }).eq("id", id);
       if (error) throw error;
+
+      await logActivity({
+        userId: user_id,
+        action: is_completed ? "Checklist concluído" : "Checklist reaberto",
+        entityType: "task",
+        entityId: task_id,
+        details: { checklist_id: id, is_completed },
+      });
     },
-    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ["checklists"] }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["checklists"] });
+      qc.invalidateQueries({ queryKey: ["activity_log", vars.task_id] });
+    },
   });
 }
 
 export function useToggleSubtask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, is_completed }: { id: string; is_completed: boolean }) => {
+    mutationFn: async ({
+      id,
+      is_completed,
+      task_id,
+      user_id,
+    }: {
+      id: string;
+      is_completed: boolean;
+      task_id: string;
+      user_id?: string;
+    }) => {
       const { error } = await supabase.from("subtasks").update({ is_completed }).eq("id", id);
       if (error) throw error;
+
+      await logActivity({
+        userId: user_id,
+        action: is_completed ? "Subtarefa concluída" : "Subtarefa reaberta",
+        entityType: "task",
+        entityId: task_id,
+        details: { subtask_id: id, is_completed },
+      });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["subtasks"] }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["subtasks"] });
+      qc.invalidateQueries({ queryKey: ["activity_log", vars.task_id] });
+    },
   });
 }
 
 export function useAddComment() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ task_id, author_id, content, mentions }: { task_id: string; author_id: string; content: string; mentions?: string[] }) => {
+    mutationFn: async ({
+      task_id,
+      author_id,
+      content,
+      mentions,
+    }: {
+      task_id: string;
+      author_id: string;
+      content: string;
+      mentions?: string[];
+    }) => {
       const { error } = await supabase.from("comments").insert({ task_id, author_id, content, mentions: mentions || [] });
       if (error) throw error;
+
+      await logActivity({
+        userId: author_id,
+        action: "Comentário adicionado",
+        entityType: "task",
+        entityId: task_id,
+        details: { content_preview: content.slice(0, 120), mentions: mentions || [] },
+      });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["comments"] }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["comments"] });
+      qc.invalidateQueries({ queryKey: ["activity_log", vars.task_id] });
+    },
   });
 }
 
@@ -152,18 +216,40 @@ export function useSubmitApproval() {
     mutationFn: async ({ task_id, requested_by }: { task_id: string; requested_by: string }) => {
       const { error } = await supabase.from("approvals").insert({ task_id, requested_by, status: "pendente" });
       if (error) throw error;
+
+      await logActivity({
+        userId: requested_by,
+        action: "Aprovação solicitada",
+        entityType: "task",
+        entityId: task_id,
+        details: { status: "pendente" },
+      });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["approvals"] }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["approvals"] });
+      qc.invalidateQueries({ queryKey: ["activity_log", vars.task_id] });
+    },
   });
 }
 
 export function useUpdateTask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
+    mutationFn: async ({ id, actor_id, ...updates }: { id: string; actor_id?: string; [key: string]: any }) => {
       const { error } = await supabase.from("tasks").update(updates).eq("id", id);
       if (error) throw error;
+
+      await logActivity({
+        userId: actor_id,
+        action: "Tarefa atualizada",
+        entityType: "task",
+        entityId: id,
+        details: { updated_fields: Object.keys(updates), updates },
+      });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["activity_log", vars.id] });
+    },
   });
 }
