@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckSquare, Clock, ThumbsUp, Target, CalendarDays, AlertTriangle, CheckCircle2, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { format, subHours, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -273,6 +274,39 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Cards prioritários */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <Card className="lg:col-span-2 card-hover cursor-pointer border-primary/20" onClick={() => navigate("/tarefas?status=aprovacao")}>
+          <CardHeader>
+            <CardTitle>Tarefas Pendentes de Aprovação</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-end justify-between">
+            <p className="text-4xl font-bold text-primary">{kpi?.pendingApprovals || 0}</p>
+            <p className="text-sm text-muted-foreground">Clique para abrir filtros de aprovação</p>
+          </CardContent>
+        </Card>
+
+        <Card className="card-hover cursor-pointer" onClick={() => navigate("/eventos")}>
+          <CardHeader>
+            <CardTitle>Próximos Eventos</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-3xl font-bold">{events.length}</p>
+            <p className="text-sm text-muted-foreground">Visualize agenda e calendário</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Criar Evento ou Tarefa</CardTitle>
+        </CardHeader>
+        <CardContent className="flex gap-2">
+          <Button onClick={() => navigate("/eventos")}>Criar Evento</Button>
+          <Button variant="outline" onClick={() => navigate("/tarefas")}>Criar Tarefa</Button>
+        </CardContent>
+      </Card>
+
       {/* KPIs */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {kpiCards.map((k, i) => {

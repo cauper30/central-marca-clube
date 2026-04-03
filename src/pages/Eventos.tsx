@@ -2,19 +2,15 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEventsWithDetails } from "@/hooks/useEvents";
 import { Button } from "@/components/ui/button";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Calendar, List, Plus } from "lucide-react";
+import { Calendar, Plus } from "lucide-react";
 import EventCalendarView from "@/components/events/EventCalendarView";
 import EventListView from "@/components/events/EventListView";
 import EventDrawer from "@/components/events/EventDrawer";
 import CreateEventModal from "@/components/events/CreateEventModal";
 import type { EventWithDetails } from "@/hooks/useEvents";
 
-type ViewMode = "calendario" | "lista";
-
 export default function Eventos() {
   const { user } = useAuth();
-  const [view, setView] = useState<ViewMode>("calendario");
   const [selectedEvent, setSelectedEvent] = useState<EventWithDetails | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -30,21 +26,10 @@ export default function Eventos() {
     <div className="space-y-6">
       {/* Action bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <ToggleGroup
-          type="single"
-          value={view}
-          onValueChange={(v) => v && setView(v as ViewMode)}
-          className="rounded-full border border-border bg-card p-1"
-        >
-          <ToggleGroupItem value="calendario" className="rounded-full px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-            <Calendar className="mr-1.5 h-4 w-4" />
-            Calendário
-          </ToggleGroupItem>
-          <ToggleGroupItem value="lista" className="rounded-full px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-            <List className="mr-1.5 h-4 w-4" />
-            Lista
-          </ToggleGroupItem>
-        </ToggleGroup>
+        <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-sm text-muted-foreground">
+          <Calendar className="h-4 w-4" />
+          Próximos eventos e calendário
+        </div>
 
         <Button size="sm" onClick={() => setCreateOpen(true)}>
           <Plus className="mr-1.5 h-4 w-4" />
@@ -52,12 +37,8 @@ export default function Eventos() {
         </Button>
       </div>
 
-      {/* Views */}
-      {view === "calendario" ? (
-        <EventCalendarView events={events} loading={isLoading} onEventClick={openDrawer} />
-      ) : (
-        <EventListView events={events} loading={isLoading} onEventClick={openDrawer} />
-      )}
+      <EventListView events={events} loading={isLoading} onEventClick={openDrawer} />
+      <EventCalendarView events={events} loading={isLoading} onEventClick={openDrawer} />
 
       {/* Drawer */}
       <EventDrawer
