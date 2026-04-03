@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { useCreateTask, useTaskStatuses, useTaskTypes, useProfiles, useTags, useEvents, useCampaigns } from "@/hooks/useTasks";
+import { useCreateTask, useTaskStatuses, useTaskTypes, useProfiles, useTags, useEvents } from "@/hooks/useTasks";
 import { toast } from "sonner";
 
 interface Props {
@@ -25,7 +25,6 @@ export default function CreateTaskModal({ open, onClose, isGestor, userId, userA
   const [assignee, setAssignee] = useState<string>("");
   const [dueDate, setDueDate] = useState("");
   const [eventId, setEventId] = useState<string>("");
-  const [campaignId, setCampaignId] = useState<string>("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const { data: statuses = [] } = useTaskStatuses();
@@ -33,7 +32,6 @@ export default function CreateTaskModal({ open, onClose, isGestor, userId, userA
   const { data: profiles = [] } = useProfiles();
   const { data: tags = [] } = useTags();
   const { data: events = [] } = useEvents();
-  const { data: campaigns = [] } = useCampaigns();
   const createTask = useCreateTask();
 
   const defaultStatusId = statuses.length > 0 ? statuses[0].id : "";
@@ -57,7 +55,6 @@ export default function CreateTaskModal({ open, onClose, isGestor, userId, userA
         assigned_to: assignee || null,
         due_date: dueDate || null,
         event_id: eventId || null,
-        campaign_id: campaignId || null,
         status_id: defaultStatusId,
         created_by: userId,
         is_demand: isGestor,
@@ -74,7 +71,7 @@ export default function CreateTaskModal({ open, onClose, isGestor, userId, userA
 
   const resetForm = () => {
     setTitle(""); setDescription(""); setTypeId(""); setPriority("media");
-    setAssignee(""); setDueDate(""); setEventId(""); setCampaignId("");
+    setAssignee(""); setDueDate(""); setEventId("");
     setSelectedTags([]);
   };
 
@@ -134,25 +131,14 @@ export default function CreateTaskModal({ open, onClose, isGestor, userId, userA
             <Label>Prazo</Label>
             <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Evento</Label>
-              <Select value={eventId} onValueChange={setEventId}>
-                <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
-                <SelectContent>
-                  {events.map((e) => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Campanha</Label>
-              <Select value={campaignId} onValueChange={setCampaignId}>
-                <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
-                <SelectContent>
-                  {campaigns.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-1.5">
+            <Label>Evento</Label>
+            <Select value={eventId} onValueChange={setEventId}>
+              <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
+              <SelectContent>
+                {events.map((e) => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
           {tags.length > 0 && (
             <div className="space-y-1.5">
