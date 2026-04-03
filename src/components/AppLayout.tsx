@@ -2,25 +2,15 @@ import { useState, useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  LayoutGrid, CheckSquare, Calendar, Link as LinkIcon,
-  MessageCircle, Settings, Bell, Menu, X, LogOut, User
-} from "lucide-react";
+import { Bell, Menu, X, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-
-const menuItems = [
-  { label: "Dashboard", path: "/dashboard", icon: LayoutGrid, roles: ["superadmin", "vice_superadmin", "equipe_marketing", "presidente", "gestor"] },
-  { label: "Tarefas", path: "/tarefas", icon: CheckSquare, roles: ["superadmin", "vice_superadmin", "equipe_marketing", "presidente", "gestor"] },
-  { label: "Eventos & Campanhas", path: "/eventos", icon: Calendar, roles: ["superadmin", "vice_superadmin", "equipe_marketing", "presidente", "gestor"] },
-  { label: "Linktree", path: "/linktree", icon: LinkIcon, roles: ["superadmin", "vice_superadmin", "equipe_marketing"] },
-  { label: "Reclamações", path: "/reclamacoes", icon: MessageCircle, roles: ["superadmin", "vice_superadmin", "equipe_marketing", "presidente"] },
-  { label: "Configurações", path: "/config", icon: Settings, roles: ["superadmin", "vice_superadmin"] },
-];
+import { getMenuItems, getPageTitle } from "@/lib/moduleRegistry";
+import type { UserRole } from "@/lib/moduleRegistry";
 
 const roleLabels: Record<string, string> = {
   superadmin: "Super Admin",
@@ -28,21 +18,6 @@ const roleLabels: Record<string, string> = {
   equipe_marketing: "Equipe Marketing",
   presidente: "Presidente",
   gestor: "Gestor",
-};
-
-const pageTitles: Record<string, string> = {
-  "/dashboard": "Dashboard",
-  "/tarefas": "Tarefas",
-  "/eventos": "Eventos & Campanhas",
-  "/linktree": "Linktree",
-  "/reclamacoes": "Reclamações & Sugestões",
-  "/config": "Configurações",
-  "/config/usuarios": "Usuários",
-  "/config/tipos": "Tipos de Tarefa",
-  "/config/status": "Status de Tarefas",
-  "/config/campos": "Campos Personalizados",
-  "/config/linktree": "Linktree",
-  "/config/geral": "Configurações Gerais",
 };
 
 export default function AppLayout() {
@@ -53,9 +28,7 @@ export default function AppLayout() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<any[]>([]);
 
-  const visibleItems = menuItems.filter((item) =>
-    profile ? item.roles.includes(profile.role) : false
-  );
+  const visibleItems = profile ? getMenuItems(profile.role as UserRole) : [];
 
   useEffect(() => {
     if (!profile) return;
@@ -111,7 +84,7 @@ export default function AppLayout() {
     .slice(0, 2)
     .toUpperCase() || "?";
 
-  const pageTitle = pageTitles[location.pathname] || "";
+  const pageTitle = getPageTitle(location.pathname);
 
   return (
     <div className="flex min-h-screen bg-background">

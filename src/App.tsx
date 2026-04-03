@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -7,22 +8,22 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AppLayout from "@/components/AppLayout";
 import Login from "@/pages/Login";
-import Dashboard from "@/pages/Dashboard";
-import PublicLinks from "@/pages/PublicLinks";
-import Tarefas from "@/pages/Tarefas";
-import Eventos from "@/pages/Eventos";
-import Reclamacoes from "@/pages/Reclamacoes";
-import LinktreePage from "@/pages/LinktreePage";
-import Config from "@/pages/Config";
-import ConfigUsuarios from "@/pages/config/ConfigUsuarios";
-import ConfigTipos from "@/pages/config/ConfigTipos";
-import ConfigStatus from "@/pages/config/ConfigStatus";
-import ConfigCampos from "@/pages/config/ConfigCampos";
-import ConfigLinktree from "@/pages/config/ConfigLinktree";
-import ConfigGeral from "@/pages/config/ConfigGeral";
 import NotFound from "@/pages/NotFound";
+import { modules, configSubModules } from "@/lib/moduleRegistry";
+import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
+
+function PageLoader() {
+  return (
+    <div className="flex min-h-[200px] items-center justify-center">
+      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+    </div>
+  );
+}
+
+const configModule = modules.find((m) => m.id === "config");
+const topLevelModules = modules.filter((m) => m.id !== "config");
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -31,33 +32,54 @@ const App = () => (
       <Sonner />
       <AuthProvider>
         <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/links" element={<PublicLinks />} />
-            <Route
-              element={
-                <ProtectedRoute>
-                  <AppLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/tarefas" element={<Tarefas />} />
-              <Route path="/eventos" element={<Eventos />} />
-              <Route path="/linktree" element={<LinktreePage />} />
-              <Route path="/reclamacoes" element={<Reclamacoes />} />
-              <Route path="/config" element={<Config />}>
-                <Route path="usuarios" element={<ConfigUsuarios />} />
-                <Route path="tipos" element={<ConfigTipos />} />
-                <Route path="status" element={<ConfigStatus />} />
-                <Route path="campos" element={<ConfigCampos />} />
-                <Route path="linktree" element={<ConfigLinktree />} />
-                <Route path="geral" element={<ConfigGeral />} />
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route
+                element={
+                  <ProtectedRoute>
+                    <AppLayout />
+                  </ProtectedRoute>
+                }
+              >
+                {topLevelModules.map((mod) => (
+                  <Route
+                    key={mod.id}
+                    path={mod.path}
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <mod.component />
+                      </Suspense>
+                    }
+                  />
+                ))}
+                {configModule && (
+                  <Route
+                    path={configModule.path}
+                    element={
+                      <Suspense fallback={<PageLoader />}>
+                        <configModule.component />
+                      </Suspense>
+                    }
+                  >
+                    {configSubModules.map((sub) => (
+                      <Route
+                        key={sub.id}
+                        path={sub.path}
+                        element={
+                          <Suspense fallback={<PageLoader />}>
+                            <sub.component />
+                          </Suspense>
+                        }
+                      />
+                    ))}
+                  </Route>
+                )}
               </Route>
-            </Route>
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>

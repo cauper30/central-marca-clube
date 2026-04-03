@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { CalendarDays, MapPin, User, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { EventWithDetails, useEventTasks, useCampaignsForEvent } from "@/hooks/useEvents";
+import { EventWithDetails, useEventTasks } from "@/hooks/useEvents";
 import { useCreateTask, useTaskStatuses } from "@/hooks/useTasks";
 import { toast } from "sonner";
 
@@ -28,7 +28,6 @@ interface Props {
 
 export default function EventDrawer({ event, open, onClose, userId }: Props) {
   const { data: tasks = [] } = useEventTasks(event?.id || null);
-  const { data: campaigns = [] } = useCampaignsForEvent(event?.id || null);
   const { data: statuses = [] } = useTaskStatuses();
   const createTask = useCreateTask();
   const [creatingTask, setCreatingTask] = useState(false);
@@ -98,22 +97,6 @@ export default function EventDrawer({ event, open, onClose, userId }: Props) {
                 </div>
               )}
             </div>
-
-            {/* Campaigns */}
-            {campaigns.length > 0 && (
-              <>
-                <Separator />
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold">Campanhas Vinculadas</h4>
-                  {campaigns.map((c) => (
-                    <div key={c.id} className="rounded border border-border p-2">
-                      <p className="text-sm font-medium">{c.name}</p>
-                      {c.description && <p className="text-xs text-muted-foreground mt-0.5">{c.description}</p>}
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
 
             {/* Linked tasks */}
             <Separator />
