@@ -70,7 +70,7 @@ export default function Login() {
           <div className="w-12 h-0.5 bg-white/30 rounded-full" />
 
           <p className="text-white/60 text-sm leading-relaxed max-w-xs">
-            Gerencie tarefas, eventos e campanhas de marketing em um único lugar.
+            Gerencie tarefas e eventos de marketing em um único lugar.
           </p>
         </div>
       </div>

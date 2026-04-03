@@ -105,21 +105,6 @@ export function useEvents() {
   });
 }
 
-export function useCampaigns() {
-  return useQuery({
-    queryKey: ["campaigns_active"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("campaigns")
-        .select("id, name")
-        .eq("is_archived", false)
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
-}
-
 export function useUpdateTaskStatus() {
   const qc = useQueryClient();
   return useMutation({
@@ -142,7 +127,6 @@ export function useCreateTask() {
       assigned_to?: string | null;
       due_date?: string | null;
       event_id?: string | null;
-      campaign_id?: string | null;
       status_id: string;
       created_by: string;
       is_demand?: boolean;
