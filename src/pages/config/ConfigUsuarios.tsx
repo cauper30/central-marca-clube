@@ -5,13 +5,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import type { Database } from "@/integrations/supabase/types";
 import { Constants } from "@/integrations/supabase/types";
+import AvatarUpload from "@/components/shared/AvatarUpload";
+import { useAuth } from "@/contexts/AuthContext";
 
 type UserRole = Database["public"]["Enums"]["user_role"];
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -27,6 +29,7 @@ const roleLabels: Record<UserRole, string> = {
 export default function ConfigUsuarios() {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { user, refreshProfile } = useAuth();
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["profiles"],
@@ -63,11 +66,12 @@ export default function ConfigUsuarios() {
               <TableHead>Cargo</TableHead>
               <TableHead>Área</TableHead>
               <TableHead>Ativo</TableHead>
+              <TableHead>Avatar</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
             ) : users.map((u) => {
               const initials = u.full_name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "?";
               return (
@@ -75,6 +79,7 @@ export default function ConfigUsuarios() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
+                        <AvatarImage src={u.avatar_url || undefined} alt={u.full_name} />
                         <AvatarFallback className="bg-accent text-accent-foreground text-xs">{initials}</AvatarFallback>
                       </Avatar>
                       <div>
@@ -102,6 +107,19 @@ export default function ConfigUsuarios() {
                       checked={u.is_active}
                       onCheckedChange={(v) => updateProfile.mutate({ id: u.id, updates: { is_active: v } })}
                     />
+                  </TableCell>
+                  <TableCell>
+                    {user?.id === u.id ? (
+                      <AvatarUpload
+                        userId={u.id}
+                        onUploaded={async () => {
+                          await refreshProfile();
+                          qc.invalidateQueries({ queryKey: ["profiles"] });
+                        }}
+                      />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                 </TableRow>
               );

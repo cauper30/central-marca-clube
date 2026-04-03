@@ -20,6 +20,7 @@ import {
 } from "@/hooks/useTaskDetails";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import TaskAttachments from "@/components/tasks/TaskAttachments";
 
 const priorityColors: Record<string, string> = {
   urgente: "bg-red-100 text-red-800",
@@ -34,8 +35,41 @@ interface Props {
   onClose: () => void;
 }
 
+interface CustomFieldValueRow {
+  id: string;
+  value: string | null;
+  custom_fields?: { name?: string | null } | null;
+}
+
+interface SubtaskRow {
+  id: string;
+  title: string;
+  is_completed: boolean;
+  profiles?: { full_name?: string | null } | null;
+}
+
+interface ApprovalRow {
+  id: string;
+  status: string;
+  requested?: { full_name?: string | null } | null;
+}
+
+interface CommentRow {
+  id: string;
+  content: string;
+  created_at: string;
+  profiles?: { full_name?: string | null } | null;
+}
+
+interface ActivityRow {
+  id: string;
+  action: string;
+  created_at: string;
+  profiles?: { full_name?: string | null } | null;
+}
+
 export default function TaskDrawer({ task, open, onClose }: Props) {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const [comment, setComment] = useState("");
   const { data: statuses = [] } = useTaskStatuses();
   const { data: profiles = [] } = useProfiles();
@@ -165,7 +199,7 @@ export default function TaskDrawer({ task, open, onClose }: Props) {
                 <Separator />
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold">Campos Personalizados</h4>
-                  {cfValues.map((cfv: any) => (
+                  {cfValues.map((cfv: CustomFieldValueRow) => (
                     <div key={cfv.id} className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">{cfv.custom_fields?.name}</span>
                       <span>{cfv.value || "—"}</span>
@@ -208,7 +242,7 @@ export default function TaskDrawer({ task, open, onClose }: Props) {
                 <Separator />
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold">Subtarefas</h4>
-                  {subtasks.map((s: any) => (
+                  {subtasks.map((s: SubtaskRow) => (
                     <label key={s.id} className="flex items-center gap-2 text-sm cursor-pointer rounded p-1 hover:bg-muted/50">
                       <Checkbox
                         checked={s.is_completed}
@@ -239,7 +273,7 @@ export default function TaskDrawer({ task, open, onClose }: Props) {
               {approvals.length === 0 ? (
                 <p className="text-xs text-muted-foreground">Nenhuma aprovação solicitada</p>
               ) : (
-                approvals.map((a: any) => (
+                approvals.map((a: ApprovalRow) => (
                   <div key={a.id} className="flex items-center justify-between rounded border border-border p-2 text-xs">
                     <span>{a.requested?.full_name}</span>
                     <Badge variant={a.status === "aprovado" ? "default" : a.status === "reprovado" ? "destructive" : "secondary"} className="text-[10px]">
@@ -250,6 +284,9 @@ export default function TaskDrawer({ task, open, onClose }: Props) {
               )}
             </div>
 
+            <Separator />
+            <TaskAttachments taskId={task.id} />
+
             {/* Comments */}
             <Separator />
             <div className="space-y-3">
@@ -259,7 +296,7 @@ export default function TaskDrawer({ task, open, onClose }: Props) {
               {comments.length === 0 && (
                 <p className="text-xs text-muted-foreground">Nenhum comentário</p>
               )}
-              {comments.map((c: any) => (
+              {comments.map((c: CommentRow) => (
                 <div key={c.id} className="space-y-1">
                   <div className="flex items-center gap-2">
                     <Avatar className="h-5 w-5">
@@ -295,7 +332,7 @@ export default function TaskDrawer({ task, open, onClose }: Props) {
                 <Separator />
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold">Atividade</h4>
-                  {activity.map((a: any) => (
+                  {activity.map((a: ActivityRow) => (
                     <div key={a.id} className="flex items-start gap-2 text-xs">
                       <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-muted-foreground shrink-0" />
                       <div>

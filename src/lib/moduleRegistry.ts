@@ -27,7 +27,7 @@ export interface AppModule {
   icon: ComponentType<{ className?: string; style?: React.CSSProperties }>;
   roles: UserRole[];
   sortOrder: number;
-  component: React.LazyExoticComponent<ComponentType<any>>;
+  component: React.LazyExoticComponent<ComponentType<unknown>>;
   showInSidebar?: boolean;
   pageTitle?: string;
 }
@@ -38,7 +38,7 @@ export interface ConfigSubModule {
   description: string;
   path: string;
   icon: ComponentType<{ className?: string; style?: React.CSSProperties }>;
-  component: React.LazyExoticComponent<ComponentType<any>>;
+  component: React.LazyExoticComponent<ComponentType<unknown>>;
   pageTitle?: string;
   section?: string;
 }

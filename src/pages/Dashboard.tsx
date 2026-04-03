@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckSquare, Clock, ThumbsUp, Target, CalendarDays, AlertTriangle, CheckCircle2, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { format, subHours, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -20,6 +21,21 @@ interface AttentionItem {
   text: string;
   link: string;
   type: 'overdue' | 'approval' | 'event';
+}
+
+interface DashboardEvent {
+  id: string;
+  name: string;
+  event_date: string | null;
+  status: string;
+}
+
+interface ActivityItem {
+  id: string;
+  action: string;
+  created_at: string;
+  details?: { title?: string } | null;
+  profiles?: { full_name?: string | null } | null;
 }
 
 /* Animated counter hook */
@@ -109,9 +125,9 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [kpi, setKpi] = useState<KPI | null>(null);
   const [statusData, setStatusData] = useState<{ id: string; name: string; count: number; color: string }[]>([]);
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<DashboardEvent[]>([]);
   const [assigneeData, setAssigneeData] = useState<{ id: string; name: string; count: number }[]>([]);
-  const [activities, setActivities] = useState<any[]>([]);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [attentionItems, setAttentionItems] = useState<AttentionItem[]>([]);
   const [totalAttention, setTotalAttention] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -258,6 +274,39 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Cards prioritários */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <Card className="lg:col-span-2 card-hover cursor-pointer border-primary/20" onClick={() => navigate("/tarefas?status=aprovacao")}>
+          <CardHeader>
+            <CardTitle>Tarefas Pendentes de Aprovação</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-end justify-between">
+            <p className="text-4xl font-bold text-primary">{kpi?.pendingApprovals || 0}</p>
+            <p className="text-sm text-muted-foreground">Clique para abrir filtros de aprovação</p>
+          </CardContent>
+        </Card>
+
+        <Card className="card-hover cursor-pointer" onClick={() => navigate("/eventos")}>
+          <CardHeader>
+            <CardTitle>Próximos Eventos</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-3xl font-bold">{events.length}</p>
+            <p className="text-sm text-muted-foreground">Visualize agenda e calendário</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Criar Evento ou Tarefa</CardTitle>
+        </CardHeader>
+        <CardContent className="flex gap-2">
+          <Button onClick={() => navigate("/eventos")}>Criar Evento</Button>
+          <Button variant="outline" onClick={() => navigate("/tarefas")}>Criar Tarefa</Button>
+        </CardContent>
+      </Card>
+
       {/* KPIs */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {kpiCards.map((k, i) => {
@@ -457,7 +506,7 @@ export default function Dashboard() {
               <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma atividade registrada</p>
             ) : (
               <div className="divide-y divide-border/50">
-                {activities.map((a: any) => {
+                {activities.map((a: ActivityItem) => {
                   const name = a.profiles?.full_name || "Usuário";
                   const avatarColor = getAvatarColor(name);
                   return (

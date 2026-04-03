@@ -26,6 +26,12 @@ interface Props {
   userId: string;
 }
 
+interface EventTaskRow {
+  id: string;
+  title: string;
+  task_statuses?: { name: string; color: string } | null;
+}
+
 export default function EventDrawer({ event, open, onClose, userId }: Props) {
   const { data: tasks = [] } = useEventTasks(event?.id || null);
   const { data: statuses = [] } = useTaskStatuses();
@@ -131,7 +137,7 @@ export default function EventDrawer({ event, open, onClose, userId }: Props) {
               {tasks.length === 0 && !creatingTask ? (
                 <p className="text-xs text-muted-foreground">Nenhuma tarefa vinculada</p>
               ) : (
-                tasks.map((t: any) => (
+                tasks.map((t: EventTaskRow) => (
                   <div key={t.id} className="flex items-center justify-between rounded border border-border p-2">
                     <span className="text-sm">{t.title}</span>
                     {t.task_statuses && (

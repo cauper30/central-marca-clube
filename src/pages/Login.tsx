@@ -13,6 +13,7 @@ function getRedirectPath(role: string) {
 
 export default function Login() {
   const { profile, loading: authLoading } = useAuth();
+  const [showForm, setShowForm] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -89,68 +90,86 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Form header */}
-          <div className="mb-8 hidden md:block">
-            <h2 className="text-2xl font-bold" style={{ color: '#1A1A2E' }}>Bem-vindo de volta</h2>
-            <p className="text-sm text-muted-foreground mt-1">Entre com suas credenciais para continuar</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-[13px] font-medium" style={{ color: '#334155' }}>
-                E-mail
-              </Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="h-11 rounded-xl pl-10"
-                />
-              </div>
+          {!showForm ? (
+            <div className="space-y-5 text-center animate-fade-in-up">
+              <h2 className="text-2xl font-bold" style={{ color: "#1A1A2E" }}>Bem-vindo à Central do Marketing</h2>
+              <p className="text-sm text-muted-foreground">Clique para iniciar sua sessão</p>
+              <Button
+                type="button"
+                className="w-full h-11 rounded-xl text-[14px] font-semibold btn-hover border-0 text-white"
+                style={{
+                  background: "linear-gradient(135deg, #C62828 0%, #8B0000 100%)",
+                  boxShadow: "0 4px 14px rgba(198, 40, 40, 0.35)",
+                }}
+                onClick={() => setShowForm(true)}
+              >
+                Fazer Login
+              </Button>
             </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-[13px] font-medium" style={{ color: '#334155' }}>
-                Senha
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="h-11 rounded-xl pl-10"
-                />
+          ) : (
+            <div className="space-y-5 animate-fade-in-up">
+              <div className="mb-2">
+                <h2 className="text-2xl font-bold" style={{ color: "#1A1A2E" }}>Entre com as suas credenciais</h2>
+                <p className="text-sm text-muted-foreground mt-1">Entre com as suas credenciais para continuar</p>
               </div>
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="space-y-1.5">
+                  <Label htmlFor="email" className="text-[13px] font-medium" style={{ color: "#334155" }}>
+                    E-mail
+                  </Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="h-11 rounded-xl pl-10"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="password" className="text-[13px] font-medium" style={{ color: "#334155" }}>
+                    Senha
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="h-11 rounded-xl pl-10"
+                    />
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3">
+                    <p className="text-[13px] text-destructive">{error}</p>
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full h-11 rounded-xl text-[14px] font-semibold btn-hover border-0 text-white"
+                  style={{
+                    background: "linear-gradient(135deg, #C62828 0%, #8B0000 100%)",
+                    boxShadow: "0 4px 14px rgba(198, 40, 40, 0.35)",
+                  }}
+                  disabled={loading}
+                >
+                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Entrar
+                </Button>
+              </form>
             </div>
-
-            {error && (
-              <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3">
-                <p className="text-[13px] text-destructive">{error}</p>
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              className="w-full h-11 rounded-xl text-[14px] font-semibold btn-hover border-0 text-white"
-              style={{
-                background: 'linear-gradient(135deg, #C62828 0%, #8B0000 100%)',
-                boxShadow: '0 4px 14px rgba(198, 40, 40, 0.35)',
-              }}
-              disabled={loading}
-            >
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Entrar
-            </Button>
-          </form>
+          )}
         </div>
       </div>
     </div>

@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTasks, useTaskStatuses } from "@/hooks/useTasks";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { LayoutGrid, List, BarChart3, Plus, Filter, Archive } from "lucide-react";
+import { LayoutGrid, List, Plus, Filter, Archive } from "lucide-react";
 import KanbanView from "@/components/tasks/KanbanView";
 import ListView from "@/components/tasks/ListView";
 import ChartsView from "@/components/tasks/ChartsView";
@@ -13,7 +13,7 @@ import CreateTaskModal from "@/components/tasks/CreateTaskModal";
 import TaskFilters from "@/components/tasks/TaskFilters";
 import { Task } from "@/hooks/useTasks";
 
-export type ViewMode = "kanban" | "lista" | "graficos";
+export type ViewMode = "kanban" | "lista";
 
 export interface TaskFilter {
   statusIds: string[];
@@ -103,10 +103,6 @@ export default function Tarefas() {
             <List className="mr-1.5 h-4 w-4" />
             Lista
           </ToggleGroupItem>
-          <ToggleGroupItem value="graficos" className="rounded-full px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
-            <BarChart3 className="mr-1.5 h-4 w-4" />
-            Gráficos
-          </ToggleGroupItem>
         </ToggleGroup>
 
         <div className="flex items-center gap-2">
@@ -147,6 +143,9 @@ export default function Tarefas() {
         />
       )}
 
+      {/* Gráficos compactos sempre visíveis */}
+      <ChartsView tasks={filteredTasks} statuses={statuses} />
+
       {/* Views */}
       {view === "kanban" && (
         <KanbanView
@@ -164,10 +163,6 @@ export default function Tarefas() {
           onTaskClick={openDrawer}
         />
       )}
-      {view === "graficos" && (
-        <ChartsView tasks={filteredTasks} statuses={statuses} />
-      )}
-
       {/* Drawer */}
       <TaskDrawer
         task={selectedTask}
