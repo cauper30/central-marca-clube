@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckSquare, Clock, ThumbsUp, Target, CalendarDays, AlertTriangle, CheckCircle2, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { format, subHours, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -20,6 +21,21 @@ interface AttentionItem {
   text: string;
   link: string;
   type: 'overdue' | 'approval' | 'event';
+}
+
+interface DashboardEvent {
+  id: string;
+  name: string;
+  event_date: string | null;
+  status: string;
+}
+
+interface ActivityItem {
+  id: string;
+  action: string;
+  created_at: string;
+  details?: { title?: string } | null;
+  profiles?: { full_name?: string | null } | null;
 }
 
 /* Animated counter hook */
@@ -109,120 +125,131 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [kpi, setKpi] = useState<KPI | null>(null);
   const [statusData, setStatusData] = useState<{ id: string; name: string; count: number; color: string }[]>([]);
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<DashboardEvent[]>([]);
   const [assigneeData, setAssigneeData] = useState<{ id: string; name: string; count: number }[]>([]);
-  const [activities, setActivities] = useState<any[]>([]);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [attentionItems, setAttentionItems] = useState<AttentionItem[]>([]);
   const [totalAttention, setTotalAttention] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [completedStatusId, setCompletedStatusId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAll = async () => {
-      const [
-        { data: statuses },
-        { data: tasks },
-        { data: approvals },
-        { data: eventsData },
-        { data: profiles },
-        { data: activityData },
-      ] = await Promise.all([
-        supabase.from("task_statuses").select("*").eq("is_active", true).order("sort_order"),
-        supabase.from("tasks").select("id, title, status_id, assigned_to, due_date, is_archived, created_at, updated_at, event_id").eq("is_archived", false),
-        supabase.from("approvals").select("id, status, requested_at, task_id").eq("status", "pendente"),
-        supabase.from("events").select("*").eq("is_archived", false).order("event_date"),
-        supabase.from("profiles").select("id, full_name, avatar_url"),
-        supabase.from("activity_log").select("*, profiles:user_id(full_name, avatar_url)").order("created_at", { ascending: false }).limit(10),
-      ]);
+      try {
+        setLoadError(null);
+        const [
+          { data: statuses, error: statusesError },
+          { data: tasks, error: tasksError },
+          { data: approvals, error: approvalsError },
+          { data: eventsData, error: eventsError },
+          { data: profiles, error: profilesError },
+          { data: activityData, error: activityError },
+        ] = await Promise.all([
+          supabase.from("task_statuses").select("*").eq("is_active", true).order("sort_order"),
+          supabase.from("tasks").select("id, title, status_id, assigned_to, due_date, is_archived, created_at, updated_at, event_id").eq("is_archived", false),
+          supabase.from("approvals").select("id, status, requested_at, task_id").eq("status", "pendente"),
+          supabase.from("events").select("*").eq("is_archived", false).order("event_date"),
+          supabase.from("profiles").select("id, full_name, avatar_url"),
+          supabase.from("activity_log").select("*, profiles:user_id(full_name, avatar_url)").order("created_at", { ascending: false }).limit(10),
+        ]);
 
-      const completedStatus = statuses?.find((s) => s.name.toLowerCase().includes("conclu"));
-      setCompletedStatusId(completedStatus?.id || null);
+        const queryError = statusesError || tasksError || approvalsError || eventsError || profilesError || activityError;
+        if (queryError) throw queryError;
 
-      const now = new Date();
-      const today = new Date().toISOString().split("T")[0];
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const completedStatus = statuses?.find((s) => s.name.toLowerCase().includes("conclu"));
+        setCompletedStatusId(completedStatus?.id || null);
 
-      const openTasks = tasks?.filter((t) => t.status_id !== completedStatus?.id).length || 0;
-      const completedTasks = tasks?.filter((t) => t.status_id === completedStatus?.id) || [];
-      const completedThisMonth = completedTasks.filter((t) => new Date(t.updated_at) >= monthStart).length;
+        const now = new Date();
+        const today = new Date().toISOString().split("T")[0];
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      const tasksWithDue = completedTasks.filter((t) => t.due_date);
-      const onTime = tasksWithDue.filter((t) => new Date(t.updated_at) <= new Date(t.due_date!)).length;
-      const onTimePercent = tasksWithDue.length > 0 ? Math.round((onTime / tasksWithDue.length) * 100) : 100;
+        const openTasks = tasks?.filter((t) => t.status_id !== completedStatus?.id).length || 0;
+        const completedTasks = tasks?.filter((t) => t.status_id === completedStatus?.id) || [];
+        const completedThisMonth = completedTasks.filter((t) => new Date(t.updated_at) >= monthStart).length;
 
-      setKpi({ openTasks, completedThisMonth, pendingApprovals: approvals?.length || 0, onTimePercent });
+        const tasksWithDue = completedTasks.filter((t) => t.due_date);
+        const onTime = tasksWithDue.filter((t) => new Date(t.updated_at) <= new Date(t.due_date!)).length;
+        const onTimePercent = tasksWithDue.length > 0 ? Math.round((onTime / tasksWithDue.length) * 100) : 100;
 
-      // Build attention items
-      const attention: AttentionItem[] = [];
+        setKpi({ openTasks, completedThisMonth, pendingApprovals: approvals?.length || 0, onTimePercent });
 
-      // Overdue tasks
-      const overdue = tasks?.filter((t) =>
-        t.due_date && t.due_date < today && t.status_id !== completedStatus?.id
-      ) || [];
-      overdue.forEach((t) => {
-        attention.push({
-          icon: <AlertTriangle className="h-4 w-4 text-destructive" />,
-          text: `"${t.title}" está atrasada (prazo: ${format(new Date(t.due_date + "T12:00:00"), "dd/MM", { locale: ptBR })})`,
-          link: `/tarefas?status=${t.status_id}`,
-          type: 'overdue',
-        });
-      });
+        // Build attention items
+        const attention: AttentionItem[] = [];
 
-      // Pending approvals older than 48h
-      const threshold48h = subHours(now, 48);
-      approvals?.filter((a) => new Date(a.requested_at) < threshold48h).forEach((a) => {
-        attention.push({
-          icon: <Clock className="h-4 w-4 text-warning" />,
-          text: `Aprovação pendente há mais de 48h`,
-          link: `/tarefas`,
-          type: 'approval',
-        });
-      });
-
-      // Events in next 3 days with incomplete tasks
-      const threeDaysFromNow = addDays(now, 3).toISOString().split("T")[0];
-      const upcomingEvents = eventsData?.filter((e) =>
-        e.event_date && e.event_date >= today && e.event_date <= threeDaysFromNow
-      ) || [];
-      upcomingEvents.forEach((ev) => {
-        const eventTasks = tasks?.filter((t) => t.event_id === ev.id && t.status_id !== completedStatus?.id) || [];
-        if (eventTasks.length > 0) {
+        // Overdue tasks
+        const overdue = tasks?.filter((t) =>
+          t.due_date && t.due_date < today && t.status_id !== completedStatus?.id
+        ) || [];
+        overdue.forEach((t) => {
           attention.push({
-            icon: <CalendarDays className="h-4 w-4 text-info" />,
-            text: `"${ev.name}" em ${format(new Date(ev.event_date + "T12:00:00"), "dd/MM", { locale: ptBR })} tem ${eventTasks.length} tarefa(s) pendente(s)`,
-            link: `/eventos`,
-            type: 'event',
+            icon: <AlertTriangle className="h-4 w-4 text-destructive" />,
+            text: `"${t.title}" está atrasada (prazo: ${format(new Date(t.due_date + "T12:00:00"), "dd/MM", { locale: ptBR })})`,
+            link: `/tarefas?status=${t.status_id}`,
+            type: 'overdue',
           });
-        }
-      });
-
-      setTotalAttention(attention.length);
-      setAttentionItems(attention.slice(0, 5));
-
-      if (statuses && tasks) {
-        setStatusData(statuses.map((s) => ({
-          id: s.id, name: s.name,
-          count: tasks.filter((t) => t.status_id === s.id).length,
-          color: s.color,
-        })));
-      }
-
-      if (tasks && profiles) {
-        const assigneeCounts: Record<string, number> = {};
-        tasks.forEach((t) => {
-          if (t.assigned_to) assigneeCounts[t.assigned_to] = (assigneeCounts[t.assigned_to] || 0) + 1;
         });
-        setAssigneeData(
-          Object.entries(assigneeCounts)
-            .map(([id, count]) => ({ id, name: profiles.find((p) => p.id === id)?.full_name || "Sem nome", count }))
-            .sort((a, b) => b.count - a.count)
-            .slice(0, 6)
-        );
-      }
 
-      setEvents(eventsData?.filter((e) => e.event_date && e.event_date >= today).slice(0, 5) || []);
-      setActivities(activityData || []);
-      setLoading(false);
+        // Pending approvals older than 48h
+        const threshold48h = subHours(now, 48);
+        approvals?.filter((a) => new Date(a.requested_at) < threshold48h).forEach((a) => {
+          attention.push({
+            icon: <Clock className="h-4 w-4 text-warning" />,
+            text: `Aprovação pendente há mais de 48h`,
+            link: `/tarefas`,
+            type: 'approval',
+          });
+        });
+
+        // Events in next 3 days with incomplete tasks
+        const threeDaysFromNow = addDays(now, 3).toISOString().split("T")[0];
+        const upcomingEvents = eventsData?.filter((e) =>
+          e.event_date && e.event_date >= today && e.event_date <= threeDaysFromNow
+        ) || [];
+        upcomingEvents.forEach((ev) => {
+          const eventTasks = tasks?.filter((t) => t.event_id === ev.id && t.status_id !== completedStatus?.id) || [];
+          if (eventTasks.length > 0) {
+            attention.push({
+              icon: <CalendarDays className="h-4 w-4 text-info" />,
+              text: `"${ev.name}" em ${format(new Date(ev.event_date + "T12:00:00"), "dd/MM", { locale: ptBR })} tem ${eventTasks.length} tarefa(s) pendente(s)`,
+              link: `/eventos`,
+              type: 'event',
+            });
+          }
+        });
+
+        setTotalAttention(attention.length);
+        setAttentionItems(attention.slice(0, 5));
+
+        if (statuses && tasks) {
+          setStatusData(statuses.map((s) => ({
+            id: s.id, name: s.name,
+            count: tasks.filter((t) => t.status_id === s.id).length,
+            color: s.color,
+          })));
+        }
+
+        if (tasks && profiles) {
+          const assigneeCounts: Record<string, number> = {};
+          tasks.forEach((t) => {
+            if (t.assigned_to) assigneeCounts[t.assigned_to] = (assigneeCounts[t.assigned_to] || 0) + 1;
+          });
+          setAssigneeData(
+            Object.entries(assigneeCounts)
+              .map(([id, count]) => ({ id, name: profiles.find((p) => p.id === id)?.full_name || "Sem nome", count }))
+              .sort((a, b) => b.count - a.count)
+              .slice(0, 6)
+          );
+        }
+
+        setEvents(eventsData?.filter((e) => e.event_date && e.event_date >= today).slice(0, 5) || []);
+        setActivities(activityData || []);
+      } catch (error) {
+        console.error("Erro ao carregar dashboard:", error);
+        setLoadError("Não foi possível carregar o dashboard agora. Tente novamente.");
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchAll();
@@ -242,6 +269,16 @@ export default function Dashboard() {
     );
   }
 
+  if (loadError) {
+    return (
+      <Card className="p-6">
+        <h2 className="text-lg font-semibold mb-2">Erro ao carregar dashboard</h2>
+        <p className="text-sm text-muted-foreground mb-4">{loadError}</p>
+        <Button onClick={() => window.location.reload()}>Tentar novamente</Button>
+      </Card>
+    );
+  }
+
   const kpiCards = [
     { label: "Tarefas Abertas", value: kpi!.openTasks, sub: "em andamento", isPercent: false, onClick: () => navigate("/tarefas") },
     { label: "Concluídas no Mês", value: kpi!.completedThisMonth, sub: "este mês", isPercent: false, onClick: () => navigate(completedStatusId ? `/tarefas?status=${completedStatusId}` : "/tarefas") },
@@ -258,6 +295,39 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Cards prioritários */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <Card className="lg:col-span-2 card-hover cursor-pointer border-primary/20" onClick={() => navigate("/tarefas?status=aprovacao")}>
+          <CardHeader>
+            <CardTitle>Tarefas Pendentes de Aprovação</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-end justify-between">
+            <p className="text-4xl font-bold text-primary">{kpi?.pendingApprovals || 0}</p>
+            <p className="text-sm text-muted-foreground">Clique para abrir filtros de aprovação</p>
+          </CardContent>
+        </Card>
+
+        <Card className="card-hover cursor-pointer" onClick={() => navigate("/eventos")}>
+          <CardHeader>
+            <CardTitle>Próximos Eventos</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-3xl font-bold">{events.length}</p>
+            <p className="text-sm text-muted-foreground">Visualize agenda e calendário</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Criar Evento ou Tarefa</CardTitle>
+        </CardHeader>
+        <CardContent className="flex gap-2">
+          <Button onClick={() => navigate("/eventos")}>Criar Evento</Button>
+          <Button variant="outline" onClick={() => navigate("/tarefas")}>Criar Tarefa</Button>
+        </CardContent>
+      </Card>
+
       {/* KPIs */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {kpiCards.map((k, i) => {
@@ -457,7 +527,7 @@ export default function Dashboard() {
               <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma atividade registrada</p>
             ) : (
               <div className="divide-y divide-border/50">
-                {activities.map((a: any) => {
+                {activities.map((a: ActivityItem) => {
                   const name = a.profiles?.full_name || "Usuário";
                   const avatarColor = getAvatarColor(name);
                   return (

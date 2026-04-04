@@ -22,6 +22,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,36 +34,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", userId)
       .single();
+    if (error) {
+      console.error("Erro ao buscar profile:", error.message);
+      return;
+    }
     if (data) setProfile(data);
   };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        try {
+          setSession(session);
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            await fetchProfile(session.user.id);
+          } else {
+            setProfile(null);
+          }
+        } catch (error) {
+          console.error("Erro no onAuthStateChange:", error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    );
+
+    supabase.auth.getSession()
+      .then(async ({ data: { session } }) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
           await fetchProfile(session.user.id);
-        } else {
-          setProfile(null);
         }
+      })
+      .catch((error) => {
+        console.error("Erro ao recuperar sessão:", error);
+      })
+      .finally(() => {
         setLoading(false);
-      }
-    );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      }
-      setLoading(false);
-    });
+      });
 
     return () => subscription.unsubscribe();
   }, []);
@@ -77,8 +93,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
   };
 
+  const refreshProfile = async () => {
+    if (!user?.id) return;
+    await fetchProfile(user.id);
+  };
+
   return (
-    <AuthContext.Provider value={{ session, user, profile, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, user, profile, loading, signIn, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
