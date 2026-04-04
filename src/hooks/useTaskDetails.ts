@@ -87,7 +87,7 @@ export function useApprovals(taskId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("approvals")
-        .select("*, requested:requested_by(full_name), decided:decided_by(full_name)")
+        .select("*, requested:profiles!approvals_requested_by_fkey(full_name), decided:profiles!approvals_decided_by_fkey(full_name)")
         .eq("task_id", taskId!)
         .order("requested_at", { ascending: false });
       if (error) throw error;
