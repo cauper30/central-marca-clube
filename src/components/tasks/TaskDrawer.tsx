@@ -273,7 +273,7 @@ export default function TaskDrawer({ task, open, onClose }: Props) {
               {approvals.length === 0 ? (
                 <p className="text-xs text-muted-foreground">Nenhuma aprovação solicitada</p>
               ) : (
-                approvals.map((a: ApprovalRow) => (
+                approvals.map((a: any) => (
                   <div key={a.id} className="flex items-center justify-between rounded border border-border p-2 text-xs">
                     <span>{a.requested?.full_name}</span>
                     <Badge variant={a.status === "aprovado" ? "default" : a.status === "reprovado" ? "destructive" : "secondary"} className="text-[10px]">

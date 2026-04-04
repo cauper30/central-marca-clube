@@ -243,7 +243,13 @@ export default function Dashboard() {
         }
 
         setEvents(eventsData?.filter((e) => e.event_date && e.event_date >= today).slice(0, 5) || []);
-        setActivities(activityData || []);
+        setActivities((activityData || []).map((a: any) => ({
+          id: a.id,
+          action: a.action,
+          created_at: a.created_at,
+          details: typeof a.details === 'object' && a.details !== null && !Array.isArray(a.details) ? a.details as { title?: string } : null,
+          profiles: a.profiles,
+        })));
       } catch (error) {
         console.error("Erro ao carregar dashboard:", error);
         setLoadError("Não foi possível carregar o dashboard agora. Tente novamente.");
@@ -475,7 +481,7 @@ export default function Dashboard() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[13px] font-medium" style={{ color: '#1A1A2E' }}>{e.name}</p>
-                        {e.location && <p className="truncate text-xs text-muted-foreground">{e.location}</p>}
+                        {(e as any).location && <p className="truncate text-xs text-muted-foreground">{(e as any).location}</p>}
                       </div>
                       {e.status && (
                         <span
