@@ -76,8 +76,8 @@ export function useUploadAttachment() {
         .upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
 
-      const { data, error } = await supabase
-        .from("task_attachments" as never)
+      const { data, error } = await (supabase
+        .from("task_attachments" as any)
         .insert({
           task_id: taskId,
           file_name: file.name,
@@ -86,9 +86,9 @@ export function useUploadAttachment() {
           file_size: file.size,
           version_label: versionLabel || null,
           created_by: userId,
-        })
+        } as any)
         .select("*")
-        .single();
+        .single() as any);
       if (error) throw error;
 
       await supabase.from("activity_log").insert({

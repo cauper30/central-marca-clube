@@ -481,7 +481,7 @@ export default function Dashboard() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[13px] font-medium" style={{ color: '#1A1A2E' }}>{e.name}</p>
-                        {e.location && <p className="truncate text-xs text-muted-foreground">{e.location}</p>}
+                        {(e as any).location && <p className="truncate text-xs text-muted-foreground">{(e as any).location}</p>}
                       </div>
                       {e.status && (
                         <span

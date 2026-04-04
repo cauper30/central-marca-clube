@@ -244,7 +244,7 @@ export function useUpdateTask() {
         action: "Tarefa atualizada",
         entityType: "task",
         entityId: id,
-        details: { updated_fields: Object.keys(updates), updates },
+        details: { updated_fields: Object.keys(updates), updates: JSON.parse(JSON.stringify(updates)) },
       });
     },
     onSuccess: (_, vars) => {
