@@ -33,54 +33,81 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-    if (error) {
-      console.error("Erro ao buscar profile:", error.message);
-      return;
+  const fetchProfile = async (userId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+      if (error) {
+        console.error("Erro ao buscar profile:", error.message);
+        return false;
+      }
+      if (data) {
+        setProfile(data);
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error("Erro inesperado ao buscar profile:", err);
+      return false;
     }
-    if (data) setProfile(data);
   };
 
   useEffect(() => {
+    let mounted = true;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!mounted) return;
         try {
           setSession(session);
           setUser(session?.user ?? null);
           if (session?.user) {
-            await fetchProfile(session.user.id);
+            const ok = await fetchProfile(session.user.id);
+            if (!ok && mounted) {
+              setProfile(null);
+            }
           } else {
             setProfile(null);
           }
         } catch (error) {
           console.error("Erro no onAuthStateChange:", error);
+          if (mounted) setProfile(null);
         } finally {
-          setLoading(false);
+          if (mounted) setLoading(false);
         }
       }
     );
 
     supabase.auth.getSession()
       .then(async ({ data: { session } }) => {
+        if (!mounted) return;
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          await fetchProfile(session.user.id);
+          const ok = await fetchProfile(session.user.id);
+          if (!ok && mounted) {
+            // Session exists but no profile — sign out to avoid stuck state
+            await supabase.auth.signOut();
+            setSession(null);
+            setUser(null);
+            setProfile(null);
+          }
         }
       })
       .catch((error) => {
         console.error("Erro ao recuperar sessão:", error);
       })
       .finally(() => {
-        setLoading(false);
+        if (mounted) setLoading(false);
       });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
