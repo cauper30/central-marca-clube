@@ -33,17 +33,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-    if (error) {
-      console.error("Erro ao buscar profile:", error.message);
-      return;
+  const fetchProfile = async (userId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+      if (error) {
+        console.error("Erro ao buscar profile:", error.message);
+        return false;
+      }
+      if (data) {
+        setProfile(data);
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error("Erro inesperado ao buscar profile:", err);
+      return false;
     }
-    if (data) setProfile(data);
   };
 
   useEffect(() => {
